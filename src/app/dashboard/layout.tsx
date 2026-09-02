@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getProjects } from "@/lib/data";
 import { Avatar } from "@/components/ui/avatar";
 import { signOut } from "@/app/login/actions";
-
-const NAV_ITEMS = [{ label: "My Tasks", href: "/dashboard" }];
+import { NewProjectForm } from "@/components/tasks/new-project-form";
 
 export default async function DashboardLayout({
   children,
@@ -15,6 +16,7 @@ export default async function DashboardLayout({
   } = await supabase.auth.getUser();
 
   const email = user?.email ?? "";
+  const projects = await getProjects();
 
   return (
     <div className="flex flex-1">
@@ -23,16 +25,33 @@ export default async function DashboardLayout({
           Tuque
         </div>
 
-        <nav className="flex flex-1 flex-col gap-0.5">
-          {NAV_ITEMS.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              className="rounded-md px-2 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
-            >
-              {item.label}
-            </a>
-          ))}
+        <nav className="flex flex-1 flex-col gap-4 overflow-y-auto">
+          <Link
+            href="/dashboard"
+            className="rounded-md px-2 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+          >
+            My Tasks
+          </Link>
+
+          <div>
+            <div className="flex items-center justify-between px-2 pb-1">
+              <span className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">
+                Projects
+              </span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              {projects.map((project) => (
+                <Link
+                  key={project.id}
+                  href={`/dashboard/projects/${project.id}`}
+                  className="truncate rounded-md px-2 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+                >
+                  {project.name}
+                </Link>
+              ))}
+            </div>
+            <NewProjectForm />
+          </div>
         </nav>
 
         <div className="flex items-center gap-2 border-t border-border pt-3">
@@ -51,7 +70,7 @@ export default async function DashboardLayout({
         </div>
       </aside>
 
-      <main className="flex-1 px-8 py-6">{children}</main>
+      <main className="flex-1 overflow-y-auto px-8 py-6">{children}</main>
     </div>
   );
 }

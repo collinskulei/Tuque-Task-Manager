@@ -29,6 +29,20 @@ export default async function LoginPage(props: PageProps<"/login">) {
             Create account
           </Button>
         </form>
+
+        <details className="mt-6 rounded-md border border-border">
+          <summary className="cursor-pointer select-none px-3 py-2 text-sm text-foreground-muted hover:text-foreground">
+            Demo credentials
+          </summary>
+          <div className="border-t border-border px-3 py-2 text-sm text-foreground-muted">
+            <p>
+              Email: <span className="text-foreground">admin@iacentre.co.ke</span>
+            </p>
+            <p>
+              Password: <span className="text-foreground">DemoAdmin</span>
+            </p>
+          </div>
+        </details>
       </div>
     </div>
   );
