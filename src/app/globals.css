@@ -16,6 +16,9 @@
   --danger: #d64545;
   --danger-muted: #fbeaea;
 
+  --success: #1a9e6b;
+  --success-muted: #e8f7f0;
+
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
@@ -36,6 +39,9 @@
 
   --color-danger: var(--danger);
   --color-danger-muted: var(--danger-muted);
+
+  --color-success: var(--success);
+  --color-success-muted: var(--success-muted);
 
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
@@ -61,6 +67,9 @@
 
     --danger: #e5766f;
     --danger-muted: #3a1f1f;
+
+    --success: #3ecf94;
+    --success-muted: #123626;
   }
 }
 

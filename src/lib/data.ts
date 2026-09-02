@@ -4,8 +4,12 @@ import type {
   Comment,
   CustomField,
   Notification,
+  Portfolio,
+  PortfolioProjectRollup,
   Profile,
   Project,
+  ProjectForm,
+  Rule,
   Tag,
   Task,
 } from "@/lib/types";
@@ -195,4 +199,84 @@ export async function getUnreadNotificationCount(userId: string): Promise<number
     .eq("user_id", userId)
     .eq("read", false);
   return count ?? 0;
+}
+
+export async function getProjectRules(projectId: string): Promise<Rule[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("rules")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: true });
+  return data ?? [];
+}
+
+export async function getProjectForm(projectId: string): Promise<ProjectForm | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("forms")
+    .select("*")
+    .eq("project_id", projectId)
+    .maybeSingle();
+  return data;
+}
+
+export async function getPortfolios(): Promise<Portfolio[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("portfolios")
+    .select("*")
+    .order("created_at", { ascending: true });
+  return data ?? [];
+}
+
+export async function getPortfolio(portfolioId: string): Promise<Portfolio | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("portfolios")
+    .select("*")
+    .eq("id", portfolioId)
+    .single();
+  return data;
+}
+
+export async function getPortfolioRollups(portfolioId: string): Promise<PortfolioProjectRollup[]> {
+  const supabase = await createClient();
+  const { data: links } = await supabase
+    .from("portfolio_projects")
+    .select("project_id")
+    .eq("portfolio_id", portfolioId);
+
+  const projectIds = (links ?? []).map((l) => l.project_id);
+  if (projectIds.length === 0) return [];
+
+  const [{ data: projects }, { data: tasks }] = await Promise.all([
+    supabase.from("projects").select("*").in("id", projectIds),
+    supabase.from("tasks").select("project_id, status").in("project_id", projectIds).is("parent_task_id", null),
+  ]);
+
+  return (projects ?? []).map((project) => {
+    const projectTasks = (tasks ?? []).filter((t) => t.project_id === project.id);
+    return {
+      project,
+      totalTasks: projectTasks.length,
+      doneTasks: projectTasks.filter((t) => t.status === "done").length,
+    };
+  });
+}
+
+export async function getProjectTaskCounts(projectId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("tasks")
+    .select("status")
+    .eq("project_id", projectId);
+
+  const rows = data ?? [];
+  return {
+    todo: rows.filter((r) => r.status === "todo").length,
+    in_progress: rows.filter((r) => r.status === "in_progress").length,
+    done: rows.filter((r) => r.status === "done").length,
+    total: rows.length,
+  };
 }

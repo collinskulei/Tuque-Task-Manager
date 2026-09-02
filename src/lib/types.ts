@@ -68,6 +68,45 @@ export interface Notification {
   created_at: string;
 }
 
+export type RuleTriggerType = "task_created" | "status_changed" | "assignee_changed";
+export type RuleActionType = "set_status" | "set_assignee" | "add_tag" | "notify_assignee";
+
+export interface Rule {
+  id: string;
+  project_id: string;
+  name: string;
+  enabled: boolean;
+  trigger_type: RuleTriggerType;
+  trigger_value: Record<string, string>;
+  action_type: RuleActionType;
+  action_value: Record<string, string>;
+  created_by: string;
+  created_at: string;
+}
+
+export interface ProjectForm {
+  project_id: string;
+  description: string | null;
+  include_description: boolean;
+  include_due_date: boolean;
+  include_assignee: boolean;
+  custom_field_ids: string[];
+  created_at: string;
+}
+
+export interface Portfolio {
+  id: string;
+  name: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface PortfolioProjectRollup {
+  project: Project;
+  totalTasks: number;
+  doneTasks: number;
+}
+
 export interface Task {
   id: string;
   project_id: string;

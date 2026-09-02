@@ -3,7 +3,12 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { CustomFieldType, TaskStatus } from "@/lib/types";
+import type {
+  CustomFieldType,
+  RuleActionType,
+  RuleTriggerType,
+  TaskStatus,
+} from "@/lib/types";
 
 async function requireUserId() {
   const supabase = await createClient();
@@ -21,8 +26,9 @@ async function notify(input: {
   message: string;
   taskId?: string;
   projectId?: string;
+  system?: boolean;
 }) {
-  if (input.userId === input.actorId) return;
+  if (!input.system && input.userId === input.actorId) return;
   const supabase = await createClient();
   await supabase.from("notifications").insert({
     user_id: input.userId,
@@ -32,6 +38,66 @@ async function notify(input: {
     task_id: input.taskId ?? null,
     project_id: input.projectId ?? null,
   });
+}
+
+async function runRules(
+  projectId: string,
+  taskId: string,
+  triggerType: RuleTriggerType,
+  context: { status?: TaskStatus; assigneeId?: string | null }
+) {
+  const supabase = await createClient();
+  const { data: rules } = await supabase
+    .from("rules")
+    .select("*")
+    .eq("project_id", projectId)
+    .eq("trigger_type", triggerType)
+    .eq("enabled", true);
+
+  for (const rule of rules ?? []) {
+    const tv = rule.trigger_value ?? {};
+    if (triggerType === "status_changed" && tv.status && tv.status !== context.status) continue;
+    if (
+      triggerType === "assignee_changed" &&
+      tv.assignee_id &&
+      tv.assignee_id !== (context.assigneeId ?? "")
+    )
+      continue;
+
+    const av = rule.action_value ?? {};
+    if (rule.action_type === "set_status" && av.status) {
+      await supabase
+        .from("tasks")
+        .update({ status: av.status, updated_at: new Date().toISOString() })
+        .eq("id", taskId);
+    } else if (rule.action_type === "set_assignee" && av.assignee_id) {
+      await supabase.from("tasks").update({ assignee_id: av.assignee_id }).eq("id", taskId);
+    } else if (rule.action_type === "add_tag" && av.tag_id) {
+      await supabase
+        .from("task_tags")
+        .upsert(
+          { task_id: taskId, tag_id: av.tag_id },
+          { onConflict: "task_id,tag_id", ignoreDuplicates: true }
+        );
+    } else if (rule.action_type === "notify_assignee") {
+      const { data: task } = await supabase
+        .from("tasks")
+        .select("assignee_id, title")
+        .eq("id", taskId)
+        .single();
+      if (task?.assignee_id) {
+        await notify({
+          userId: task.assignee_id,
+          actorId: task.assignee_id,
+          system: true,
+          type: "rule",
+          message: av.message || `Rule "${rule.name}" triggered on "${task.title}"`,
+          taskId,
+          projectId,
+        });
+      }
+    }
+  }
 }
 
 export async function createProject(formData: FormData) {
@@ -70,14 +136,23 @@ export async function createTask(input: {
 
   const userId = await requireUserId();
   const supabase = await createClient();
-  const { error } = await supabase.from("tasks").insert({
-    project_id: input.projectId,
-    parent_task_id: input.parentTaskId ?? null,
-    title,
-    created_by: userId,
-  });
+  const { data, error } = await supabase
+    .from("tasks")
+    .insert({
+      project_id: input.projectId,
+      parent_task_id: input.parentTaskId ?? null,
+      title,
+      created_by: userId,
+    })
+    .select("id")
+    .single();
 
   if (error) throw new Error(error.message);
+
+  if (!input.parentTaskId) {
+    await runRules(input.projectId, data.id, "task_created", {});
+  }
+
   revalidatePath(`/dashboard/projects/${input.projectId}`);
   revalidatePath("/dashboard");
 }
@@ -94,6 +169,9 @@ export async function updateTaskStatus(
     .eq("id", taskId);
 
   if (error) throw new Error(error.message);
+
+  await runRules(projectId, taskId, "status_changed", { status });
+
   revalidatePath(`/dashboard/projects/${projectId}`);
   revalidatePath("/dashboard");
 }
@@ -133,14 +211,19 @@ export async function updateTaskDetails(input: {
 
   if (error) throw new Error(error.message);
 
-  if (input.assigneeId && input.assigneeId !== existing?.assignee_id) {
-    await notify({
-      userId: input.assigneeId,
-      actorId: userId,
-      type: "assigned",
-      message: `You were assigned to "${title}"`,
-      taskId: input.taskId,
-      projectId: input.projectId,
+  if (input.assigneeId !== existing?.assignee_id) {
+    if (input.assigneeId) {
+      await notify({
+        userId: input.assigneeId,
+        actorId: userId,
+        type: "assigned",
+        message: `You were assigned to "${title}"`,
+        taskId: input.taskId,
+        projectId: input.projectId,
+      });
+    }
+    await runRules(input.projectId, input.taskId, "assignee_changed", {
+      assigneeId: input.assigneeId,
     });
   }
 
@@ -399,4 +482,158 @@ export async function markAllNotificationsRead() {
   const supabase = await createClient();
   await supabase.from("notifications").update({ read: true }).eq("user_id", userId).eq("read", false);
   revalidatePath("/dashboard", "layout");
+}
+
+// rules -----------------------------------------------------------------
+
+export async function createRule(input: {
+  projectId: string;
+  name: string;
+  triggerType: RuleTriggerType;
+  triggerValue: Record<string, string>;
+  actionType: RuleActionType;
+  actionValue: Record<string, string>;
+}) {
+  const userId = await requireUserId();
+  const supabase = await createClient();
+  const { error } = await supabase.from("rules").insert({
+    project_id: input.projectId,
+    name: input.name,
+    trigger_type: input.triggerType,
+    trigger_value: input.triggerValue,
+    action_type: input.actionType,
+    action_value: input.actionValue,
+    created_by: userId,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath(`/dashboard/projects/${input.projectId}`);
+}
+
+export async function toggleRule(ruleId: string, enabled: boolean, projectId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("rules").update({ enabled }).eq("id", ruleId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/dashboard/projects/${projectId}`);
+}
+
+export async function deleteRule(ruleId: string, projectId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("rules").delete().eq("id", ruleId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/dashboard/projects/${projectId}`);
+}
+
+// forms -------------------------------------------------------------------
+
+export async function saveForm(input: {
+  projectId: string;
+  description: string;
+  includeDescription: boolean;
+  includeDueDate: boolean;
+  includeAssignee: boolean;
+  customFieldIds: string[];
+}) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("forms").upsert({
+    project_id: input.projectId,
+    description: input.description || null,
+    include_description: input.includeDescription,
+    include_due_date: input.includeDueDate,
+    include_assignee: input.includeAssignee,
+    custom_field_ids: input.customFieldIds,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath(`/dashboard/projects/${input.projectId}/intake`);
+  revalidatePath(`/dashboard/projects/${input.projectId}`);
+}
+
+export async function submitForm(formData: FormData) {
+  const projectId = String(formData.get("projectId"));
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) return;
+
+  const userId = await requireUserId();
+  const supabase = await createClient();
+
+  const description = formData.get("description");
+  const dueDate = formData.get("dueDate");
+  const assigneeId = formData.get("assigneeId");
+
+  const { data, error } = await supabase
+    .from("tasks")
+    .insert({
+      project_id: projectId,
+      title,
+      created_by: userId,
+      description: description ? String(description) : null,
+      due_date: dueDate ? String(dueDate) : null,
+      assignee_id: assigneeId ? String(assigneeId) : null,
+    })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+
+  for (const [key, value] of formData.entries()) {
+    if (key.startsWith("field_") && String(value).trim()) {
+      const customFieldId = key.replace("field_", "");
+      await supabase
+        .from("task_custom_field_values")
+        .upsert({ task_id: data.id, custom_field_id: customFieldId, value: String(value) });
+    }
+  }
+
+  await runRules(projectId, data.id, "task_created", {});
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  redirect(`/dashboard/projects/${projectId}/intake?submitted=1`);
+}
+
+// portfolios ----------------------------------------------------------------
+
+export async function createPortfolio(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+
+  const userId = await requireUserId();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("portfolios")
+    .insert({ name, created_by: userId })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(error?.message ?? "Failed to create portfolio");
+
+  revalidatePath("/dashboard", "layout");
+  redirect(`/dashboard/portfolios/${data.id}`);
+}
+
+export async function deletePortfolio(portfolioId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("portfolios").delete().eq("id", portfolioId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/dashboard", "layout");
+  redirect("/dashboard");
+}
+
+export async function addProjectToPortfolio(portfolioId: string, projectId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("portfolio_projects")
+    .upsert(
+      { portfolio_id: portfolioId, project_id: projectId },
+      { onConflict: "portfolio_id,project_id", ignoreDuplicates: true }
+    );
+  if (error) throw new Error(error.message);
+  revalidatePath(`/dashboard/portfolios/${portfolioId}`);
+}
+
+export async function removeProjectFromPortfolio(portfolioId: string, projectId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("portfolio_projects")
+    .delete()
+    .eq("portfolio_id", portfolioId)
+    .eq("project_id", projectId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/dashboard/portfolios/${portfolioId}`);
 }

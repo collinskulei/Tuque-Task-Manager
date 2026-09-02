@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 const dotColor: Record<TaskStatus, string> = {
   todo: "bg-foreground-subtle",
   in_progress: "bg-accent",
-  done: "bg-green-600",
+  done: "bg-success",
 };
 
 export function StatusSelect({

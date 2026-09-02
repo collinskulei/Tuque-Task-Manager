@@ -9,11 +9,12 @@ import { TaskBoard } from "@/components/tasks/task-board";
 import { TaskDetail } from "@/components/tasks/task-detail";
 import { CalendarView } from "@/components/tasks/calendar-view";
 import { TimelineView } from "@/components/tasks/timeline-view";
+import { ReportsView } from "@/components/tasks/reports-view";
 import { createTask } from "@/app/dashboard/actions";
 import { useServerAction } from "@/lib/use-server-action";
 import { cn } from "@/lib/utils";
 
-const VIEWS = ["list", "board", "calendar", "timeline"] as const;
+const VIEWS = ["list", "board", "calendar", "timeline", "reports"] as const;
 type View = (typeof VIEWS)[number];
 
 function matchesSearch(task: Task, query: string): boolean {
@@ -27,6 +28,7 @@ export function ProjectView({
   profiles,
   tags,
   customFields,
+  taskCounts,
   currentUserId,
 }: {
   projectId: string;
@@ -34,6 +36,7 @@ export function ProjectView({
   profiles: Profile[];
   tags: Tag[];
   customFields: CustomField[];
+  taskCounts: { todo: number; in_progress: number; done: number; total: number };
   currentUserId: string;
 }) {
   const [view, setView] = useState<View>("list");
@@ -79,12 +82,14 @@ export function ProjectView({
             </button>
           ))}
         </div>
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search tasks"
-          className="max-w-xs"
-        />
+        {view !== "reports" && (
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search tasks"
+            className="max-w-xs"
+          />
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -96,17 +101,20 @@ export function ProjectView({
         )}
         {view === "calendar" && <CalendarView tasks={filtered} onSelect={setSelectedTaskId} />}
         {view === "timeline" && <TimelineView tasks={filtered} onSelect={setSelectedTaskId} />}
+        {view === "reports" && <ReportsView counts={taskCounts} />}
       </div>
 
-      <div className="mt-3 flex gap-2 border-t border-border pt-3">
-        <Input
-          value={newTaskTitle}
-          onChange={(e) => setNewTaskTitle(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
-          placeholder="+ Add task"
-        />
-        <Button onClick={handleAddTask}>Add</Button>
-      </div>
+      {view !== "reports" && (
+        <div className="mt-3 flex gap-2 border-t border-border pt-3">
+          <Input
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
+            placeholder="+ Add task"
+          />
+          <Button onClick={handleAddTask}>Add</Button>
+        </div>
+      )}
 
       {selectedTask && (
         <TaskDetail

@@ -9,7 +9,7 @@ const DAY_WIDTH = 32;
 const barColor: Record<TaskStatus, string> = {
   todo: "bg-foreground-subtle",
   in_progress: "bg-accent",
-  done: "bg-green-600",
+  done: "bg-success",
 };
 
 function toDay(dateStr: string): Date {
