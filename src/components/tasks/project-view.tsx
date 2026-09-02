@@ -1,15 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Profile, Task } from "@/lib/types";
+import type { CustomField, Profile, Tag, Task } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TaskList } from "@/components/tasks/task-list";
 import { TaskBoard } from "@/components/tasks/task-board";
 import { TaskDetail } from "@/components/tasks/task-detail";
+import { CalendarView } from "@/components/tasks/calendar-view";
+import { TimelineView } from "@/components/tasks/timeline-view";
 import { createTask } from "@/app/dashboard/actions";
 import { useServerAction } from "@/lib/use-server-action";
 import { cn } from "@/lib/utils";
+
+const VIEWS = ["list", "board", "calendar", "timeline"] as const;
+type View = (typeof VIEWS)[number];
 
 function matchesSearch(task: Task, query: string): boolean {
   if (task.title.toLowerCase().includes(query)) return true;
@@ -20,14 +25,18 @@ export function ProjectView({
   projectId,
   tasks,
   profiles,
+  tags,
+  customFields,
   currentUserId,
 }: {
   projectId: string;
   tasks: Task[];
   profiles: Profile[];
+  tags: Tag[];
+  customFields: CustomField[];
   currentUserId: string;
 }) {
-  const [view, setView] = useState<"list" | "board">("list");
+  const [view, setView] = useState<View>("list");
   const [search, setSearch] = useState("");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -55,7 +64,7 @@ export function ProjectView({
     <div className="flex h-full flex-col">
       <div className="mb-4 flex items-center gap-3">
         <div className="flex rounded-md border border-border p-0.5">
-          {(["list", "board"] as const).map((v) => (
+          {VIEWS.map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
@@ -79,11 +88,14 @@ export function ProjectView({
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {view === "list" ? (
-          <TaskList tasks={filtered} profiles={profiles} onSelect={setSelectedTaskId} />
-        ) : (
+        {view === "list" && (
+          <TaskList tasks={filtered} profiles={profiles} tags={tags} onSelect={setSelectedTaskId} />
+        )}
+        {view === "board" && (
           <TaskBoard tasks={filtered} profiles={profiles} onSelect={setSelectedTaskId} />
         )}
+        {view === "calendar" && <CalendarView tasks={filtered} onSelect={setSelectedTaskId} />}
+        {view === "timeline" && <TimelineView tasks={filtered} onSelect={setSelectedTaskId} />}
       </div>
 
       <div className="mt-3 flex gap-2 border-t border-border pt-3">
@@ -100,7 +112,10 @@ export function ProjectView({
         <TaskDetail
           key={selectedTask.id}
           task={selectedTask}
+          allTasks={allTasks}
           profiles={profiles}
+          tags={tags}
+          customFields={customFields}
           currentUserId={currentUserId}
           onClose={() => setSelectedTaskId(null)}
         />

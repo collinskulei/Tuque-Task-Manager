@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getProjects } from "@/lib/data";
+import { getProjects, getUnreadNotificationCount } from "@/lib/data";
 import { Avatar } from "@/components/ui/avatar";
 import { signOut } from "@/app/login/actions";
 import { NewProjectForm } from "@/components/tasks/new-project-form";
+import { NotificationBell } from "@/components/tasks/notification-bell";
+import { RealtimeNotifications } from "@/components/tasks/realtime-notifications";
 
 export default async function DashboardLayout({
   children,
@@ -16,7 +18,10 @@ export default async function DashboardLayout({
   } = await supabase.auth.getUser();
 
   const email = user?.email ?? "";
-  const projects = await getProjects();
+  const [projects, unreadCount] = await Promise.all([
+    getProjects(),
+    getUnreadNotificationCount(user!.id),
+  ]);
 
   return (
     <div className="flex flex-1">
@@ -26,12 +31,15 @@ export default async function DashboardLayout({
         </div>
 
         <nav className="flex flex-1 flex-col gap-4 overflow-y-auto">
-          <Link
-            href="/dashboard"
-            className="rounded-md px-2 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
-          >
-            My Tasks
-          </Link>
+          <div className="flex flex-col gap-0.5">
+            <Link
+              href="/dashboard"
+              className="rounded-md px-2 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+            >
+              My Tasks
+            </Link>
+            <NotificationBell unreadCount={unreadCount} />
+          </div>
 
           <div>
             <div className="flex items-center justify-between px-2 pb-1">
@@ -68,6 +76,7 @@ export default async function DashboardLayout({
             </button>
           </form>
         </div>
+        <RealtimeNotifications userId={user!.id} />
       </aside>
 
       <main className="flex-1 overflow-y-auto px-8 py-6">{children}</main>

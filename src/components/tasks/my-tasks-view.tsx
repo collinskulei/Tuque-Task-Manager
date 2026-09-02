@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Profile, Task } from "@/lib/types";
+import type { Profile, Tag, Task } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { TaskList } from "@/components/tasks/task-list";
 import { TaskDetail } from "@/components/tasks/task-detail";
@@ -9,10 +9,12 @@ import { TaskDetail } from "@/components/tasks/task-detail";
 export function MyTasksView({
   tasks,
   profiles,
+  tags,
   currentUserId,
 }: {
   tasks: Task[];
   profiles: Profile[];
+  tags: Tag[];
   currentUserId: string;
 }) {
   const [search, setSearch] = useState("");
@@ -43,7 +45,7 @@ export function MyTasksView({
             No tasks yet. Assign yourself a task from a project.
           </p>
         ) : (
-          <TaskList tasks={filtered} profiles={profiles} onSelect={setSelectedTaskId} />
+          <TaskList tasks={filtered} profiles={profiles} tags={tags} onSelect={setSelectedTaskId} />
         )}
       </div>
 
@@ -52,6 +54,7 @@ export function MyTasksView({
           key={selectedTask.id}
           task={selectedTask}
           profiles={profiles}
+          tags={tags}
           currentUserId={currentUserId}
           onClose={() => setSelectedTaskId(null)}
         />

@@ -3,20 +3,24 @@
 import { useState } from "react";
 import {
   addComment,
+  addDependency,
   createTask,
   deleteAttachment,
   deleteComment,
   deleteTask,
   getAttachmentUrl,
+  removeDependency,
+  setCustomFieldValue,
   updateTaskDetails,
   updateTaskStatus,
   uploadAttachment,
 } from "@/app/dashboard/actions";
-import type { Profile, Task, TaskStatus } from "@/lib/types";
+import type { CustomField, Profile, Tag, Task, TaskStatus } from "@/lib/types";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusSelect } from "@/components/tasks/status-select";
+import { TagPicker } from "@/components/tasks/tag-picker";
 import { useServerAction } from "@/lib/use-server-action";
 import { formatFileSize } from "@/lib/utils";
 
@@ -25,11 +29,17 @@ export function TaskDetail({
   profiles,
   currentUserId,
   onClose,
+  allTasks = [],
+  tags = [],
+  customFields = [],
 }: {
   task: Task;
   profiles: Profile[];
   currentUserId: string;
   onClose: () => void;
+  allTasks?: Task[];
+  tags?: Tag[];
+  customFields?: CustomField[];
 }) {
   const projectId = task.project_id;
   const { run } = useServerAction();
@@ -37,19 +47,28 @@ export function TaskDetail({
   const [description, setDescription] = useState(task.description ?? "");
   const [assigneeId, setAssigneeId] = useState(task.assignee_id ?? "");
   const [dueDate, setDueDate] = useState(task.due_date ?? "");
+  const [startDate, setStartDate] = useState(task.start_date ?? "");
   const [newSubtask, setNewSubtask] = useState("");
   const [newComment, setNewComment] = useState("");
+  const [dependencyPick, setDependencyPick] = useState("");
   const profileById = new Map(profiles.map((p) => [p.id, p]));
+  const taskById = new Map(allTasks.map((t) => [t.id, t]));
 
-  function save() {
+  const projectCustomFields = customFields.filter((f) => f.project_id === projectId);
+  const dependencyOptions = allTasks.filter(
+    (t) => t.id !== task.id && !task.dependsOnIds.includes(t.id)
+  );
+
+  function save(overrides: Partial<{ title: string; description: string; assigneeId: string | null; dueDate: string | null; startDate: string | null }> = {}) {
     run(() =>
       updateTaskDetails({
         taskId: task.id,
         projectId,
-        title,
-        description,
-        assigneeId: assigneeId || null,
-        dueDate: dueDate || null,
+        title: overrides.title ?? title,
+        description: overrides.description ?? description,
+        assigneeId: "assigneeId" in overrides ? overrides.assigneeId! : assigneeId || null,
+        dueDate: "dueDate" in overrides ? overrides.dueDate! : dueDate || null,
+        startDate: "startDate" in overrides ? overrides.startDate : startDate || null,
       })
     );
   }
@@ -82,6 +101,12 @@ export function TaskDetail({
     onClose();
   }
 
+  function handleAddDependency() {
+    if (!dependencyPick) return;
+    run(() => addDependency(task.id, dependencyPick, projectId));
+    setDependencyPick("");
+  }
+
   return (
     <div className="fixed inset-0 z-10 flex justify-end bg-black/20" onClick={onClose}>
       <div
@@ -101,14 +126,23 @@ export function TaskDetail({
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          onBlur={save}
+          onBlur={() => save()}
           className="mb-3 w-full text-lg font-medium outline-none"
         />
+
+        <div className="mb-4">
+          <TagPicker
+            allTags={tags}
+            selectedTagIds={task.tagIds}
+            taskId={task.id}
+            projectId={projectId}
+          />
+        </div>
 
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          onBlur={save}
+          onBlur={() => save()}
           placeholder="Add a description..."
           rows={3}
           className="mb-4 w-full resize-none rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none placeholder:text-foreground-subtle focus:border-accent"
@@ -121,16 +155,7 @@ export function TaskDetail({
               value={assigneeId}
               onChange={(e) => {
                 setAssigneeId(e.target.value);
-                run(() =>
-                  updateTaskDetails({
-                    taskId: task.id,
-                    projectId,
-                    title,
-                    description,
-                    assigneeId: e.target.value || null,
-                    dueDate: dueDate || null,
-                  })
-                );
+                save({ assigneeId: e.target.value || null });
               }}
               className="w-full rounded-md border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-accent"
             >
@@ -148,11 +173,119 @@ export function TaskDetail({
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              onBlur={save}
+              onBlur={() => save()}
+              className="text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-foreground-subtle">Start date</label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              onBlur={() => save()}
               className="text-sm"
             />
           </div>
         </div>
+
+        {projectCustomFields.length > 0 && (
+          <section className="mb-6">
+            <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-foreground-subtle">
+              Fields
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              {projectCustomFields.map((field) => (
+                <div key={field.id}>
+                  <label className="mb-1 block text-xs text-foreground-subtle">
+                    {field.name}
+                  </label>
+                  {field.field_type === "dropdown" ? (
+                    <select
+                      defaultValue={task.customFieldValues[field.id] ?? ""}
+                      onChange={(e) =>
+                        run(() =>
+                          setCustomFieldValue(task.id, field.id, e.target.value, projectId)
+                        )
+                      }
+                      className="w-full rounded-md border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-accent"
+                    >
+                      <option value="">—</option>
+                      {(field.options ?? []).map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      type={field.field_type === "number" ? "number" : field.field_type === "date" ? "date" : "text"}
+                      defaultValue={task.customFieldValues[field.id] ?? ""}
+                      onBlur={(e) =>
+                        run(() =>
+                          setCustomFieldValue(task.id, field.id, e.target.value, projectId)
+                        )
+                      }
+                      className="text-sm"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {allTasks.length > 0 && (
+          <section className="mb-6">
+            <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-foreground-subtle">
+              Blocked by
+            </h3>
+            <div className="flex flex-col gap-1">
+              {task.dependsOnIds.map((depId) => {
+                const dep = taskById.get(depId);
+                if (!dep) return null;
+                return (
+                  <div key={depId} className="flex items-center gap-2">
+                    <span
+                      className={
+                        dep.status === "done"
+                          ? "flex-1 truncate text-sm text-foreground-subtle line-through"
+                          : "flex-1 truncate text-sm"
+                      }
+                    >
+                      {dep.title}
+                    </span>
+                    <button
+                      onClick={() => run(() => removeDependency(task.id, depId, projectId))}
+                      className="text-xs text-foreground-subtle hover:text-danger"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            {dependencyOptions.length > 0 && (
+              <div className="mt-2 flex gap-2">
+                <select
+                  value={dependencyPick}
+                  onChange={(e) => setDependencyPick(e.target.value)}
+                  className="h-8 flex-1 rounded-md border border-border bg-surface px-2 text-sm outline-none focus:border-accent"
+                >
+                  <option value="">Select a task...</option>
+                  {dependencyOptions.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.title}
+                    </option>
+                  ))}
+                </select>
+                <Button size="sm" variant="secondary" onClick={handleAddDependency}>
+                  Add
+                </Button>
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="mb-6">
           <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-foreground-subtle">

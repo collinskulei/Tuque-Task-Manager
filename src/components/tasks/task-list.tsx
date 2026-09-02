@@ -1,8 +1,9 @@
 "use client";
 
 import { updateTaskStatus } from "@/app/dashboard/actions";
-import type { Profile, Task, TaskStatus } from "@/lib/types";
+import type { Profile, Tag, Task, TaskStatus } from "@/lib/types";
 import { Avatar } from "@/components/ui/avatar";
+import { TagChip } from "@/components/tasks/tag-picker";
 import { useServerAction } from "@/lib/use-server-action";
 import { cn, formatDate } from "@/lib/utils";
 import { StatusSelect } from "@/components/tasks/status-select";
@@ -10,14 +11,17 @@ import { StatusSelect } from "@/components/tasks/status-select";
 export function TaskList({
   tasks,
   profiles,
+  tags,
   onSelect,
 }: {
   tasks: Task[];
   profiles: Profile[];
+  tags?: Tag[];
   onSelect: (taskId: string) => void;
 }) {
   const { run } = useServerAction();
   const profileById = new Map(profiles.map((p) => [p.id, p]));
+  const tagById = new Map((tags ?? []).map((t) => [t.id, t]));
 
   function handleStatusChange(taskId: string, projectId: string, status: TaskStatus) {
     run(() => updateTaskStatus(taskId, projectId, status));
@@ -38,6 +42,7 @@ export function TaskList({
           <TaskRow
             task={task}
             assignee={task.assignee_id ? profileById.get(task.assignee_id) : undefined}
+            tagById={tagById}
             onSelect={onSelect}
             onStatusChange={handleStatusChange}
           />
@@ -46,6 +51,7 @@ export function TaskList({
               key={sub.id}
               task={sub}
               assignee={sub.assignee_id ? profileById.get(sub.assignee_id) : undefined}
+              tagById={tagById}
               onSelect={onSelect}
               onStatusChange={handleStatusChange}
               indent
@@ -60,17 +66,20 @@ export function TaskList({
 function TaskRow({
   task,
   assignee,
+  tagById,
   onSelect,
   onStatusChange,
   indent,
 }: {
   task: Task;
   assignee?: Profile;
+  tagById: Map<string, Tag>;
   onSelect: (taskId: string) => void;
   onStatusChange: (taskId: string, projectId: string, status: TaskStatus) => void;
   indent?: boolean;
 }) {
   const dueDate = formatDate(task.due_date);
+  const rowTags = task.tagIds.map((id) => tagById.get(id)).filter(Boolean) as Tag[];
 
   return (
     <button
@@ -82,12 +91,20 @@ function TaskRow({
     >
       <span
         className={cn(
-          "flex-1 truncate text-sm",
+          "truncate text-sm",
           task.status === "done" && "text-foreground-subtle line-through"
         )}
       >
         {task.title}
       </span>
+      {rowTags.length > 0 && (
+        <div className="flex shrink-0 gap-1">
+          {rowTags.map((tag) => (
+            <TagChip key={tag.id} tag={tag} />
+          ))}
+        </div>
+      )}
+      <span className="flex-1" />
       {dueDate && (
         <span className="shrink-0 text-xs text-foreground-subtle">{dueDate}</span>
       )}
