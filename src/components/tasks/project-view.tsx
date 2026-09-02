@@ -30,6 +30,7 @@ export function ProjectView({
   customFields,
   taskCounts,
   currentUserId,
+  isGuest = false,
 }: {
   projectId: string;
   tasks: Task[];
@@ -38,6 +39,7 @@ export function ProjectView({
   customFields: CustomField[];
   taskCounts: { todo: number; in_progress: number; done: number; total: number };
   currentUserId: string;
+  isGuest?: boolean;
 }) {
   const [view, setView] = useState<View>("list");
   const [search, setSearch] = useState("");
@@ -94,17 +96,28 @@ export function ProjectView({
 
       <div className="flex-1 overflow-y-auto">
         {view === "list" && (
-          <TaskList tasks={filtered} profiles={profiles} tags={tags} onSelect={setSelectedTaskId} />
+          <TaskList
+            tasks={filtered}
+            profiles={profiles}
+            tags={tags}
+            onSelect={setSelectedTaskId}
+            readOnly={isGuest}
+          />
         )}
         {view === "board" && (
-          <TaskBoard tasks={filtered} profiles={profiles} onSelect={setSelectedTaskId} />
+          <TaskBoard
+            tasks={filtered}
+            profiles={profiles}
+            onSelect={setSelectedTaskId}
+            readOnly={isGuest}
+          />
         )}
         {view === "calendar" && <CalendarView tasks={filtered} onSelect={setSelectedTaskId} />}
         {view === "timeline" && <TimelineView tasks={filtered} onSelect={setSelectedTaskId} />}
         {view === "reports" && <ReportsView counts={taskCounts} />}
       </div>
 
-      {view !== "reports" && (
+      {view !== "reports" && !isGuest && (
         <div className="mt-3 flex gap-2 border-t border-border pt-3">
           <Input
             value={newTaskTitle}
@@ -120,12 +133,13 @@ export function ProjectView({
         <TaskDetail
           key={selectedTask.id}
           task={selectedTask}
-          allTasks={allTasks}
+          allTasks={isGuest ? [] : allTasks}
           profiles={profiles}
           tags={tags}
           customFields={customFields}
           currentUserId={currentUserId}
           onClose={() => setSelectedTaskId(null)}
+          readOnly={isGuest}
         />
       )}
     </div>

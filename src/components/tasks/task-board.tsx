@@ -12,10 +12,12 @@ export function TaskBoard({
   tasks,
   profiles,
   onSelect,
+  readOnly = false,
 }: {
   tasks: Task[];
   profiles: Profile[];
   onSelect: (taskId: string) => void;
+  readOnly?: boolean;
 }) {
   const { run } = useServerAction();
   const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
@@ -33,18 +35,26 @@ export function TaskBoard({
         return (
           <div
             key={column.value}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOverColumn(column.value);
-            }}
+            onDragOver={
+              readOnly
+                ? undefined
+                : (e) => {
+                    e.preventDefault();
+                    setDragOverColumn(column.value);
+                  }
+            }
             onDragLeave={() => setDragOverColumn(null)}
-            onDrop={(e) => {
-              e.preventDefault();
-              const { taskId, projectId } = JSON.parse(
-                e.dataTransfer.getData("text/plain")
-              );
-              handleDrop(taskId, projectId, column.value);
-            }}
+            onDrop={
+              readOnly
+                ? undefined
+                : (e) => {
+                    e.preventDefault();
+                    const { taskId, projectId } = JSON.parse(
+                      e.dataTransfer.getData("text/plain")
+                    );
+                    handleDrop(taskId, projectId, column.value);
+                  }
+            }
             className={cn(
               "flex min-h-[200px] flex-col gap-2 rounded-lg border border-transparent p-2",
               dragOverColumn === column.value && "border-accent bg-accent-muted"
@@ -67,12 +77,15 @@ export function TaskBoard({
               return (
                 <Card
                   key={task.id}
-                  draggable
-                  onDragStart={(e) =>
-                    e.dataTransfer.setData(
-                      "text/plain",
-                      JSON.stringify({ taskId: task.id, projectId: task.project_id })
-                    )
+                  draggable={!readOnly}
+                  onDragStart={
+                    readOnly
+                      ? undefined
+                      : (e) =>
+                          e.dataTransfer.setData(
+                            "text/plain",
+                            JSON.stringify({ taskId: task.id, projectId: task.project_id })
+                          )
                   }
                   onClick={() => onSelect(task.id)}
                   className="cursor-pointer p-3 hover:border-accent"

@@ -8,6 +8,7 @@ import type {
   RuleActionType,
   RuleTriggerType,
   TaskStatus,
+  UserRole,
 } from "@/lib/types";
 
 async function requireUserId() {
@@ -17,6 +18,23 @@ async function requireUserId() {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
   return user.id;
+}
+
+async function audit(input: {
+  actorId: string;
+  action: string;
+  targetType: string;
+  targetId?: string;
+  details?: Record<string, unknown>;
+}) {
+  const supabase = await createClient();
+  await supabase.from("audit_log").insert({
+    actor_id: input.actorId,
+    action: input.action,
+    target_type: input.targetType,
+    target_id: input.targetId ?? null,
+    details: input.details ?? null,
+  });
 }
 
 async function notify(input: {
@@ -119,9 +137,24 @@ export async function createProject(formData: FormData) {
 }
 
 export async function deleteProject(projectId: string) {
+  const userId = await requireUserId();
   const supabase = await createClient();
+  const { data: project } = await supabase
+    .from("projects")
+    .select("name")
+    .eq("id", projectId)
+    .single();
   const { error } = await supabase.from("projects").delete().eq("id", projectId);
   if (error) throw new Error(error.message);
+
+  await audit({
+    actorId: userId,
+    action: "delete_project",
+    targetType: "project",
+    targetId: projectId,
+    details: { name: project?.name },
+  });
+
   revalidatePath("/dashboard", "layout");
   redirect("/dashboard");
 }
@@ -232,9 +265,20 @@ export async function updateTaskDetails(input: {
 }
 
 export async function deleteTask(taskId: string, projectId: string) {
+  const userId = await requireUserId();
   const supabase = await createClient();
+  const { data: task } = await supabase.from("tasks").select("title").eq("id", taskId).single();
   const { error } = await supabase.from("tasks").delete().eq("id", taskId);
   if (error) throw new Error(error.message);
+
+  await audit({
+    actorId: userId,
+    action: "delete_task",
+    targetType: "task",
+    targetId: taskId,
+    details: { title: task?.title, projectId },
+  });
+
   revalidatePath(`/dashboard/projects/${projectId}`);
   revalidatePath("/dashboard");
 }
@@ -636,4 +680,99 @@ export async function removeProjectFromPortfolio(portfolioId: string, projectId:
     .eq("project_id", projectId);
   if (error) throw new Error(error.message);
   revalidatePath(`/dashboard/portfolios/${portfolioId}`);
+}
+
+// admin: roles & membership ---------------------------------------------
+
+export async function updateUserRole(targetUserId: string, role: UserRole) {
+  const userId = await requireUserId();
+  const supabase = await createClient();
+  const { error } = await supabase.from("profiles").update({ role }).eq("id", targetUserId);
+  if (error) throw new Error(error.message);
+
+  await audit({
+    actorId: userId,
+    action: "update_role",
+    targetType: "user",
+    targetId: targetUserId,
+    details: { role },
+  });
+
+  revalidatePath("/dashboard/admin");
+}
+
+export async function addProjectMember(projectId: string, userId: string) {
+  const actorId = await requireUserId();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("project_members")
+    .upsert(
+      { project_id: projectId, user_id: userId },
+      { onConflict: "project_id,user_id", ignoreDuplicates: true }
+    );
+  if (error) throw new Error(error.message);
+
+  await audit({
+    actorId,
+    action: "add_project_member",
+    targetType: "project",
+    targetId: projectId,
+    details: { userId },
+  });
+
+  revalidatePath("/dashboard/admin");
+  revalidatePath(`/dashboard/projects/${projectId}`);
+}
+
+export async function removeProjectMember(projectId: string, userId: string) {
+  const actorId = await requireUserId();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("project_members")
+    .delete()
+    .eq("project_id", projectId)
+    .eq("user_id", userId);
+  if (error) throw new Error(error.message);
+
+  await audit({
+    actorId,
+    action: "remove_project_member",
+    targetType: "project",
+    targetId: projectId,
+    details: { userId },
+  });
+
+  revalidatePath("/dashboard/admin");
+  revalidatePath(`/dashboard/projects/${projectId}`);
+}
+
+// time tracking ---------------------------------------------------------
+
+export async function logTime(input: {
+  taskId: string;
+  projectId: string;
+  hours: number;
+  note: string;
+  entryDate: string;
+}) {
+  if (!(input.hours > 0)) return;
+
+  const userId = await requireUserId();
+  const supabase = await createClient();
+  const { error } = await supabase.from("time_entries").insert({
+    task_id: input.taskId,
+    user_id: userId,
+    hours: input.hours,
+    note: input.note || null,
+    entry_date: input.entryDate,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath(`/dashboard/projects/${input.projectId}`);
+}
+
+export async function deleteTimeEntry(entryId: string, projectId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("time_entries").delete().eq("id", entryId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/dashboard/projects/${projectId}`);
 }

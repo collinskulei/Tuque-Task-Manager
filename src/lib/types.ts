@@ -7,11 +7,13 @@ export const TASK_STATUSES: { value: TaskStatus; label: string }[] = [
 ];
 
 export type CustomFieldType = "text" | "number" | "dropdown" | "date";
+export type UserRole = "admin" | "member" | "guest";
 
 export interface Profile {
   id: string;
   email: string;
   full_name: string | null;
+  role: UserRole;
 }
 
 export interface Project {
@@ -107,6 +109,37 @@ export interface PortfolioProjectRollup {
   doneTasks: number;
 }
 
+export interface TimeEntry {
+  id: string;
+  task_id: string;
+  user_id: string;
+  hours: number;
+  note: string | null;
+  entry_date: string;
+  created_at: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  actor_id: string | null;
+  action: string;
+  target_type: string;
+  target_id: string | null;
+  details: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface ProjectMember {
+  project_id: string;
+  user_id: string;
+  added_at: string;
+}
+
+export interface WorkloadRow {
+  profile: Profile;
+  openTaskCount: number;
+}
+
 export interface Task {
   id: string;
   project_id: string;
@@ -127,4 +160,5 @@ export interface Task {
   tagIds: string[];
   dependsOnIds: string[];
   customFieldValues: Record<string, string>;
+  timeEntries: TimeEntry[];
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getPortfolios, getProjects, getUnreadNotificationCount } from "@/lib/data";
+import { getPortfolios, getProjects, getUnreadNotificationCount, getMyProfile } from "@/lib/data";
 import { Avatar } from "@/components/ui/avatar";
 import { signOut } from "@/app/login/actions";
 import { NewProjectForm } from "@/components/tasks/new-project-form";
@@ -19,11 +19,15 @@ export default async function DashboardLayout({
   } = await supabase.auth.getUser();
 
   const email = user?.email ?? "";
-  const [projects, portfolios, unreadCount] = await Promise.all([
+  const [projects, portfolios, unreadCount, me] = await Promise.all([
     getProjects(),
     getPortfolios(),
     getUnreadNotificationCount(user!.id),
+    getMyProfile(user!.id),
   ]);
+
+  const isGuest = me?.role === "guest";
+  const isAdmin = me?.role === "admin";
 
   return (
     <div className="flex flex-1">
@@ -41,6 +45,22 @@ export default async function DashboardLayout({
               My Tasks
             </Link>
             <NotificationBell unreadCount={unreadCount} />
+            {!isGuest && (
+              <Link
+                href="/dashboard/workload"
+                className="rounded-md px-2 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+              >
+                Workload
+              </Link>
+            )}
+            {isAdmin && (
+              <Link
+                href="/dashboard/admin"
+                className="rounded-md px-2 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+              >
+                Admin
+              </Link>
+            )}
           </div>
 
           <div>
@@ -60,28 +80,30 @@ export default async function DashboardLayout({
                 </Link>
               ))}
             </div>
-            <NewProjectForm />
+            {!isGuest && <NewProjectForm />}
           </div>
 
-          <div>
-            <div className="flex items-center justify-between px-2 pb-1">
-              <span className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">
-                Portfolios
-              </span>
+          {!isGuest && (
+            <div>
+              <div className="flex items-center justify-between px-2 pb-1">
+                <span className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">
+                  Portfolios
+                </span>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                {portfolios.map((portfolio) => (
+                  <Link
+                    key={portfolio.id}
+                    href={`/dashboard/portfolios/${portfolio.id}`}
+                    className="truncate rounded-md px-2 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+                  >
+                    {portfolio.name}
+                  </Link>
+                ))}
+              </div>
+              <NewPortfolioForm />
             </div>
-            <div className="flex flex-col gap-0.5">
-              {portfolios.map((portfolio) => (
-                <Link
-                  key={portfolio.id}
-                  href={`/dashboard/portfolios/${portfolio.id}`}
-                  className="truncate rounded-md px-2 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
-                >
-                  {portfolio.name}
-                </Link>
-              ))}
-            </div>
-            <NewPortfolioForm />
-          </div>
+          )}
         </nav>
 
         <div className="flex items-center gap-2 border-t border-border pt-3">

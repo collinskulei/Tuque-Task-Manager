@@ -8,7 +8,9 @@ import {
   deleteAttachment,
   deleteComment,
   deleteTask,
+  deleteTimeEntry,
   getAttachmentUrl,
+  logTime,
   removeDependency,
   setCustomFieldValue,
   updateTaskDetails,
@@ -32,6 +34,7 @@ export function TaskDetail({
   allTasks = [],
   tags = [],
   customFields = [],
+  readOnly = false,
 }: {
   task: Task;
   profiles: Profile[];
@@ -40,6 +43,7 @@ export function TaskDetail({
   allTasks?: Task[];
   tags?: Tag[];
   customFields?: CustomField[];
+  readOnly?: boolean;
 }) {
   const projectId = task.project_id;
   const { run } = useServerAction();
@@ -51,6 +55,8 @@ export function TaskDetail({
   const [newSubtask, setNewSubtask] = useState("");
   const [newComment, setNewComment] = useState("");
   const [dependencyPick, setDependencyPick] = useState("");
+  const [timeHours, setTimeHours] = useState("");
+  const [timeNote, setTimeNote] = useState("");
   const profileById = new Map(profiles.map((p) => [p.id, p]));
   const taskById = new Map(allTasks.map((t) => [t.id, t]));
 
@@ -58,6 +64,7 @@ export function TaskDetail({
   const dependencyOptions = allTasks.filter(
     (t) => t.id !== task.id && !task.dependsOnIds.includes(t.id)
   );
+  const totalHours = task.timeEntries.reduce((sum, e) => sum + Number(e.hours), 0);
 
   function save(overrides: Partial<{ title: string; description: string; assigneeId: string | null; dueDate: string | null; startDate: string | null }> = {}) {
     run(() =>
@@ -107,6 +114,22 @@ export function TaskDetail({
     setDependencyPick("");
   }
 
+  function handleLogTime() {
+    const hours = parseFloat(timeHours);
+    if (!(hours > 0)) return;
+    run(() =>
+      logTime({
+        taskId: task.id,
+        projectId,
+        hours,
+        note: timeNote,
+        entryDate: new Date().toISOString().slice(0, 10),
+      })
+    );
+    setTimeHours("");
+    setTimeNote("");
+  }
+
   return (
     <div className="fixed inset-0 z-10 flex justify-end bg-black/20" onClick={onClose}>
       <div
@@ -114,7 +137,10 @@ export function TaskDetail({
         className="flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-border bg-surface p-6"
       >
         <div className="mb-4 flex items-center justify-between">
-          <StatusSelect value={task.status} onChange={handleStatusChange} />
+          <StatusSelect
+            value={task.status}
+            onChange={readOnly ? () => {} : handleStatusChange}
+          />
           <button
             onClick={onClose}
             className="text-sm text-foreground-subtle hover:text-foreground"
@@ -127,22 +153,26 @@ export function TaskDetail({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onBlur={() => save()}
+          readOnly={readOnly}
           className="mb-3 w-full text-lg font-medium outline-none"
         />
 
-        <div className="mb-4">
-          <TagPicker
-            allTags={tags}
-            selectedTagIds={task.tagIds}
-            taskId={task.id}
-            projectId={projectId}
-          />
-        </div>
+        {!readOnly && (
+          <div className="mb-4">
+            <TagPicker
+              allTags={tags}
+              selectedTagIds={task.tagIds}
+              taskId={task.id}
+              projectId={projectId}
+            />
+          </div>
+        )}
 
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           onBlur={() => save()}
+          readOnly={readOnly}
           placeholder="Add a description..."
           rows={3}
           className="mb-4 w-full resize-none rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none placeholder:text-foreground-subtle focus:border-accent"
@@ -153,11 +183,12 @@ export function TaskDetail({
             <label className="mb-1 block text-xs text-foreground-subtle">Assignee</label>
             <select
               value={assigneeId}
+              disabled={readOnly}
               onChange={(e) => {
                 setAssigneeId(e.target.value);
                 save({ assigneeId: e.target.value || null });
               }}
-              className="w-full rounded-md border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-accent"
+              className="w-full rounded-md border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-accent disabled:opacity-60"
             >
               <option value="">Unassigned</option>
               {profiles.map((p) => (
@@ -172,6 +203,7 @@ export function TaskDetail({
             <Input
               type="date"
               value={dueDate}
+              disabled={readOnly}
               onChange={(e) => setDueDate(e.target.value)}
               onBlur={() => save()}
               className="text-sm"
@@ -182,6 +214,7 @@ export function TaskDetail({
             <Input
               type="date"
               value={startDate}
+              disabled={readOnly}
               onChange={(e) => setStartDate(e.target.value)}
               onBlur={() => save()}
               className="text-sm"
@@ -203,12 +236,13 @@ export function TaskDetail({
                   {field.field_type === "dropdown" ? (
                     <select
                       defaultValue={task.customFieldValues[field.id] ?? ""}
+                      disabled={readOnly}
                       onChange={(e) =>
                         run(() =>
                           setCustomFieldValue(task.id, field.id, e.target.value, projectId)
                         )
                       }
-                      className="w-full rounded-md border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-accent"
+                      className="w-full rounded-md border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-accent disabled:opacity-60"
                     >
                       <option value="">—</option>
                       {(field.options ?? []).map((opt) => (
@@ -221,6 +255,7 @@ export function TaskDetail({
                     <Input
                       type={field.field_type === "number" ? "number" : field.field_type === "date" ? "date" : "text"}
                       defaultValue={task.customFieldValues[field.id] ?? ""}
+                      disabled={readOnly}
                       onBlur={(e) =>
                         run(() =>
                           setCustomFieldValue(task.id, field.id, e.target.value, projectId)
@@ -255,17 +290,19 @@ export function TaskDetail({
                     >
                       {dep.title}
                     </span>
-                    <button
-                      onClick={() => run(() => removeDependency(task.id, depId, projectId))}
-                      className="text-xs text-foreground-subtle hover:text-danger"
-                    >
-                      Remove
-                    </button>
+                    {!readOnly && (
+                      <button
+                        onClick={() => run(() => removeDependency(task.id, depId, projectId))}
+                        className="text-xs text-foreground-subtle hover:text-danger"
+                      >
+                        Remove
+                      </button>
+                    )}
                   </div>
                 );
               })}
             </div>
-            {dependencyOptions.length > 0 && (
+            {!readOnly && dependencyOptions.length > 0 && (
               <div className="mt-2 flex gap-2">
                 <select
                   value={dependencyPick}
@@ -296,26 +333,28 @@ export function TaskDetail({
               <div key={sub.id} className="flex items-center gap-2">
                 <StatusSelect
                   value={sub.status}
-                  onChange={(status) =>
-                    run(() => updateTaskStatus(sub.id, projectId, status))
+                  onChange={
+                    readOnly ? () => {} : (status) => run(() => updateTaskStatus(sub.id, projectId, status))
                   }
                 />
                 <span className="flex-1 truncate text-sm">{sub.title}</span>
               </div>
             ))}
           </div>
-          <div className="mt-2 flex gap-2">
-            <Input
-              value={newSubtask}
-              onChange={(e) => setNewSubtask(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAddSubtask()}
-              placeholder="Add subtask"
-              className="h-8 text-sm"
-            />
-            <Button size="sm" variant="secondary" onClick={handleAddSubtask}>
-              Add
-            </Button>
-          </div>
+          {!readOnly && (
+            <div className="mt-2 flex gap-2">
+              <Input
+                value={newSubtask}
+                onChange={(e) => setNewSubtask(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddSubtask()}
+                placeholder="Add subtask"
+                className="h-8 text-sm"
+              />
+              <Button size="sm" variant="secondary" onClick={handleAddSubtask}>
+                Add
+              </Button>
+            </div>
+          )}
         </section>
 
         <section className="mb-6">
@@ -334,7 +373,7 @@ export function TaskDetail({
                 <span className="text-xs text-foreground-subtle">
                   {formatFileSize(att.size)}
                 </span>
-                {att.uploaded_by === currentUserId && (
+                {!readOnly && att.uploaded_by === currentUserId && (
                   <button
                     onClick={() =>
                       run(() =>
@@ -349,19 +388,79 @@ export function TaskDetail({
               </div>
             ))}
           </div>
-          <form action={uploadAttachment} className="mt-2 flex items-center gap-2">
-            <input type="hidden" name="taskId" value={task.id} />
-            <input type="hidden" name="projectId" value={projectId} />
-            <input
-              type="file"
-              name="file"
-              className="flex-1 text-xs text-foreground-muted file:mr-2 file:rounded-md file:border file:border-border file:bg-surface file:px-2 file:py-1 file:text-xs"
-            />
-            <Button type="submit" size="sm" variant="secondary">
-              Upload
-            </Button>
-          </form>
+          {!readOnly && (
+            <form action={uploadAttachment} className="mt-2 flex items-center gap-2">
+              <input type="hidden" name="taskId" value={task.id} />
+              <input type="hidden" name="projectId" value={projectId} />
+              <input
+                type="file"
+                name="file"
+                className="flex-1 text-xs text-foreground-muted file:mr-2 file:rounded-md file:border file:border-border file:bg-surface file:px-2 file:py-1 file:text-xs"
+              />
+              <Button type="submit" size="sm" variant="secondary">
+                Upload
+              </Button>
+            </form>
+          )}
         </section>
+
+        {!readOnly && (
+          <section className="mb-6">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">
+                Time logged
+              </h3>
+              {totalHours > 0 && (
+                <span className="text-xs text-foreground-subtle">{totalHours}h total</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              {task.timeEntries.map((entry) => {
+                const author = profileById.get(entry.user_id);
+                return (
+                  <div key={entry.id} className="flex items-center gap-2 text-sm">
+                    <span className="shrink-0 font-medium">{entry.hours}h</span>
+                    <span className="flex-1 truncate text-foreground-muted">
+                      {entry.note || "—"}
+                    </span>
+                    <span className="shrink-0 text-xs text-foreground-subtle">
+                      {author?.full_name || author?.email}
+                    </span>
+                    {entry.user_id === currentUserId && (
+                      <button
+                        onClick={() => run(() => deleteTimeEntry(entry.id, projectId))}
+                        className="text-xs text-foreground-subtle hover:text-danger"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex gap-2">
+              <Input
+                type="number"
+                step="0.25"
+                min="0"
+                value={timeHours}
+                onChange={(e) => setTimeHours(e.target.value)}
+                placeholder="Hours"
+                className="h-8 w-20 text-sm"
+              />
+              <Input
+                value={timeNote}
+                onChange={(e) => setTimeNote(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleLogTime()}
+                placeholder="Note"
+                className="h-8 flex-1 text-sm"
+              />
+              <Button size="sm" variant="secondary" onClick={handleLogTime}>
+                Log
+              </Button>
+            </div>
+          </section>
+        )}
 
         <section className="mb-6">
           <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-foreground-subtle">
@@ -407,9 +506,11 @@ export function TaskDetail({
           </div>
         </section>
 
-        <Button variant="danger" size="sm" onClick={handleDeleteTask} className="mt-auto">
-          Delete task
-        </Button>
+        {!readOnly && (
+          <Button variant="danger" size="sm" onClick={handleDeleteTask} className="mt-auto">
+            Delete task
+          </Button>
+        )}
       </div>
     </div>
   );

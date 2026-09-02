@@ -1,7 +1,7 @@
 "use client";
 
 import { updateTaskStatus } from "@/app/dashboard/actions";
-import type { Profile, Tag, Task, TaskStatus } from "@/lib/types";
+import { TASK_STATUSES, type Profile, type Tag, type Task, type TaskStatus } from "@/lib/types";
 import { Avatar } from "@/components/ui/avatar";
 import { TagChip } from "@/components/tasks/tag-picker";
 import { useServerAction } from "@/lib/use-server-action";
@@ -13,11 +13,13 @@ export function TaskList({
   profiles,
   tags,
   onSelect,
+  readOnly = false,
 }: {
   tasks: Task[];
   profiles: Profile[];
   tags?: Tag[];
   onSelect: (taskId: string) => void;
+  readOnly?: boolean;
 }) {
   const { run } = useServerAction();
   const profileById = new Map(profiles.map((p) => [p.id, p]));
@@ -45,6 +47,7 @@ export function TaskList({
             tagById={tagById}
             onSelect={onSelect}
             onStatusChange={handleStatusChange}
+            readOnly={readOnly}
           />
           {task.subtasks.map((sub) => (
             <TaskRow
@@ -54,6 +57,7 @@ export function TaskList({
               tagById={tagById}
               onSelect={onSelect}
               onStatusChange={handleStatusChange}
+              readOnly={readOnly}
               indent
             />
           ))}
@@ -69,6 +73,7 @@ function TaskRow({
   tagById,
   onSelect,
   onStatusChange,
+  readOnly,
   indent,
 }: {
   task: Task;
@@ -76,6 +81,7 @@ function TaskRow({
   tagById: Map<string, Tag>;
   onSelect: (taskId: string) => void;
   onStatusChange: (taskId: string, projectId: string, status: TaskStatus) => void;
+  readOnly?: boolean;
   indent?: boolean;
 }) {
   const dueDate = formatDate(task.due_date);
@@ -108,10 +114,16 @@ function TaskRow({
       {dueDate && (
         <span className="shrink-0 text-xs text-foreground-subtle">{dueDate}</span>
       )}
-      <StatusSelect
-        value={task.status}
-        onChange={(status) => onStatusChange(task.id, task.project_id, status)}
-      />
+      {readOnly ? (
+        <span className="shrink-0 text-xs text-foreground-subtle">
+          {TASK_STATUSES.find((s) => s.value === task.status)?.label}
+        </span>
+      ) : (
+        <StatusSelect
+          value={task.status}
+          onChange={(status) => onStatusChange(task.id, task.project_id, status)}
+        />
+      )}
       <span className="w-8 shrink-0">
         {assignee && <Avatar name={assignee.full_name || assignee.email} />}
       </span>

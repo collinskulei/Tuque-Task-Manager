@@ -8,6 +8,7 @@ import {
   getProjectRules,
   getProjectForm,
   getProjectTaskCounts,
+  getMyProfile,
 } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { ProjectView } from "@/components/tasks/project-view";
@@ -28,7 +29,7 @@ export default async function ProjectPage(props: PageProps<"/dashboard/projects/
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [tasks, profiles, tags, customFields, rules, form, taskCounts] = await Promise.all([
+  const [tasks, profiles, tags, customFields, rules, form, taskCounts, me] = await Promise.all([
     getProjectTasks(id),
     getProfiles(),
     getTags(),
@@ -36,18 +37,23 @@ export default async function ProjectPage(props: PageProps<"/dashboard/projects/
     getProjectRules(id),
     getProjectForm(id),
     getProjectTaskCounts(id),
+    getMyProfile(user!.id),
   ]);
+
+  const isGuest = me?.role === "guest";
 
   return (
     <div className="flex h-full flex-col">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-lg font-semibold tracking-tight">{project.name}</h1>
-        <div className="flex items-center gap-3">
-          <FormManager projectId={id} form={form} customFields={customFields} />
-          <RulesManager projectId={id} rules={rules} profiles={profiles} tags={tags} />
-          <CustomFieldsManager projectId={id} fields={customFields} />
-          {project.created_by === user!.id && <DeleteProjectButton projectId={id} />}
-        </div>
+        {!isGuest && (
+          <div className="flex items-center gap-3">
+            <FormManager projectId={id} form={form} customFields={customFields} />
+            <RulesManager projectId={id} rules={rules} profiles={profiles} tags={tags} />
+            <CustomFieldsManager projectId={id} fields={customFields} />
+            {project.created_by === user!.id && <DeleteProjectButton projectId={id} />}
+          </div>
+        )}
       </div>
       <ProjectView
         projectId={id}
@@ -57,6 +63,7 @@ export default async function ProjectPage(props: PageProps<"/dashboard/projects/
         customFields={customFields}
         taskCounts={taskCounts}
         currentUserId={user!.id}
+        isGuest={isGuest}
       />
       <RealtimeProjectSync projectId={id} />
     </div>

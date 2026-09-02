@@ -11,11 +11,13 @@ export function MyTasksView({
   profiles,
   tags,
   currentUserId,
+  isGuest = false,
 }: {
   tasks: Task[];
   profiles: Profile[];
   tags: Tag[];
   currentUserId: string;
+  isGuest?: boolean;
 }) {
   const [search, setSearch] = useState("");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -45,7 +47,13 @@ export function MyTasksView({
             No tasks yet. Assign yourself a task from a project.
           </p>
         ) : (
-          <TaskList tasks={filtered} profiles={profiles} tags={tags} onSelect={setSelectedTaskId} />
+          <TaskList
+            tasks={filtered}
+            profiles={profiles}
+            tags={tags}
+            onSelect={setSelectedTaskId}
+            readOnly={isGuest}
+          />
         )}
       </div>
 
@@ -57,6 +65,7 @@ export function MyTasksView({
           tags={tags}
           currentUserId={currentUserId}
           onClose={() => setSelectedTaskId(null)}
+          readOnly={isGuest}
         />
       )}
     </div>

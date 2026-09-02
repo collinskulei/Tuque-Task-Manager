@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type {
   Attachment,
+  AuditLogEntry,
   Comment,
   CustomField,
   Notification,
@@ -9,14 +10,17 @@ import type {
   Profile,
   Project,
   ProjectForm,
+  ProjectMember,
   Rule,
   Tag,
   Task,
+  TimeEntry,
+  WorkloadRow,
 } from "@/lib/types";
 
 type RawTask = Omit<
   Task,
-  "subtasks" | "comments" | "attachments" | "tagIds" | "dependsOnIds" | "customFieldValues"
+  "subtasks" | "comments" | "attachments" | "tagIds" | "dependsOnIds" | "customFieldValues" | "timeEntries"
 >;
 
 function assembleTasks(
@@ -25,7 +29,8 @@ function assembleTasks(
   attachments: Attachment[],
   taskTags: { task_id: string; tag_id: string }[],
   dependencies: { task_id: string; depends_on_task_id: string }[],
-  fieldValues: { task_id: string; custom_field_id: string; value: string | null }[]
+  fieldValues: { task_id: string; custom_field_id: string; value: string | null }[],
+  timeEntries: TimeEntry[]
 ): Task[] {
   const byId = new Map<string, Task>();
   for (const row of rows) {
@@ -37,6 +42,7 @@ function assembleTasks(
       tagIds: [],
       dependsOnIds: [],
       customFieldValues: {},
+      timeEntries: [],
     });
   }
 
@@ -56,6 +62,9 @@ function assembleTasks(
     const task = byId.get(fv.task_id);
     if (task && fv.value !== null) task.customFieldValues[fv.custom_field_id] = fv.value;
   }
+  for (const entry of timeEntries) {
+    byId.get(entry.task_id)?.timeEntries.push(entry);
+  }
 
   const topLevel: Task[] = [];
   for (const task of byId.values()) {
@@ -73,7 +82,7 @@ async function loadTaskGraph(taskRows: RawTask[]) {
   const supabase = await createClient();
   const taskIds = taskRows.map((t) => t.id);
 
-  if (taskIds.length === 0) return assembleTasks(taskRows, [], [], [], [], []);
+  if (taskIds.length === 0) return assembleTasks(taskRows, [], [], [], [], [], []);
 
   const [
     { data: comments },
@@ -81,6 +90,7 @@ async function loadTaskGraph(taskRows: RawTask[]) {
     { data: taskTags },
     { data: dependencies },
     { data: fieldValues },
+    { data: timeEntries },
   ] = await Promise.all([
     supabase
       .from("comments")
@@ -101,6 +111,11 @@ async function loadTaskGraph(taskRows: RawTask[]) {
       .from("task_custom_field_values")
       .select("task_id, custom_field_id, value")
       .in("task_id", taskIds),
+    supabase
+      .from("time_entries")
+      .select("*")
+      .in("task_id", taskIds)
+      .order("entry_date", { ascending: false }),
   ]);
 
   return assembleTasks(
@@ -109,7 +124,8 @@ async function loadTaskGraph(taskRows: RawTask[]) {
     attachments ?? [],
     taskTags ?? [],
     dependencies ?? [],
-    fieldValues ?? []
+    fieldValues ?? [],
+    timeEntries ?? []
   );
 }
 
@@ -117,9 +133,19 @@ export async function getProfiles(): Promise<Profile[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("profiles")
-    .select("id, email, full_name")
+    .select("id, email, full_name, role")
     .order("email", { ascending: true });
   return data ?? [];
+}
+
+export async function getMyProfile(userId: string): Promise<Profile | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, email, full_name, role")
+    .eq("id", userId)
+    .single();
+  return data;
 }
 
 export async function getProjects(): Promise<Project[]> {
@@ -279,4 +305,49 @@ export async function getProjectTaskCounts(projectId: string) {
     done: rows.filter((r) => r.status === "done").length,
     total: rows.length,
   };
+}
+
+export async function getProjectMembers(projectId: string): Promise<ProjectMember[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("project_members")
+    .select("*")
+    .eq("project_id", projectId);
+  return data ?? [];
+}
+
+export async function getAllProjectMembers(): Promise<ProjectMember[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("project_members").select("*");
+  return data ?? [];
+}
+
+export async function getWorkload(): Promise<WorkloadRow[]> {
+  const supabase = await createClient();
+  const [{ data: profiles }, { data: tasks }] = await Promise.all([
+    supabase.from("profiles").select("id, email, full_name, role"),
+    supabase
+      .from("tasks")
+      .select("assignee_id, status")
+      .in("status", ["todo", "in_progress"])
+      .not("assignee_id", "is", null),
+  ]);
+
+  return (profiles ?? [])
+    .filter((p) => p.role !== "guest")
+    .map((profile) => ({
+      profile,
+      openTaskCount: (tasks ?? []).filter((t) => t.assignee_id === profile.id).length,
+    }))
+    .sort((a, b) => b.openTaskCount - a.openTaskCount);
+}
+
+export async function getAuditLog(): Promise<AuditLogEntry[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("audit_log")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(100);
+  return data ?? [];
 }
