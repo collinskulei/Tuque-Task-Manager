@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getMyProfile, getProfiles, getProjects, getAuditLog, getAllProjectMembers } from "@/lib/data";
+import { getMyProfile, getProfiles, getAuditLog } from "@/lib/data";
 import { AdminView } from "@/components/tasks/admin-view";
 
 export default async function AdminPage() {
@@ -12,23 +12,12 @@ export default async function AdminPage() {
   const me = await getMyProfile(user!.id);
   if (me?.role !== "admin") redirect("/dashboard");
 
-  const [profiles, projects, auditLog, projectMembers] = await Promise.all([
-    getProfiles(),
-    getProjects(),
-    getAuditLog(),
-    getAllProjectMembers(),
-  ]);
+  const [profiles, auditLog] = await Promise.all([getProfiles(), getAuditLog()]);
 
   return (
     <div>
       <h1 className="mb-4 text-lg font-semibold tracking-tight">Admin</h1>
-      <AdminView
-        profiles={profiles}
-        projects={projects}
-        auditLog={auditLog}
-        projectMembers={projectMembers}
-        currentUserId={user!.id}
-      />
+      <AdminView profiles={profiles} auditLog={auditLog} currentUserId={user!.id} />
     </div>
   );
 }

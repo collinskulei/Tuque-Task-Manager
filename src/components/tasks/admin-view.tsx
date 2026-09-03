@@ -1,17 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import {
-  addProjectMember,
-  removeProjectMember,
-  updateUserRole,
-} from "@/app/dashboard/actions";
-import type { AuditLogEntry, Profile, Project, ProjectMember, UserRole } from "@/lib/types";
+import { updateUserRole } from "@/app/dashboard/actions";
+import type { AuditLogEntry, Profile, UserRole } from "@/lib/types";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { useServerAction } from "@/lib/use-server-action";
 
-const ROLES: UserRole[] = ["admin", "member", "guest"];
+const ROLES: UserRole[] = ["admin", "member"];
 
 function timeAgo(dateStr: string): string {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
@@ -25,29 +19,15 @@ function timeAgo(dateStr: string): string {
 
 export function AdminView({
   profiles,
-  projects,
   auditLog,
-  projectMembers,
   currentUserId,
 }: {
   profiles: Profile[];
-  projects: Project[];
   auditLog: AuditLogEntry[];
-  projectMembers: ProjectMember[];
   currentUserId: string;
 }) {
   const { run } = useServerAction();
-  const [selectedProjectId, setSelectedProjectId] = useState(projects[0]?.id ?? "");
-  const [memberPick, setMemberPick] = useState("");
   const profileById = new Map(profiles.map((p) => [p.id, p]));
-
-  const currentMembers = useMemo(
-    () => projectMembers.filter((pm) => pm.project_id === selectedProjectId),
-    [projectMembers, selectedProjectId]
-  );
-  const memberOptions = profiles.filter(
-    (p) => !currentMembers.some((m) => m.user_id === p.id)
-  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -76,73 +56,6 @@ export function AdminView({
             </div>
           ))}
         </div>
-      </Card>
-
-      <Card>
-        <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-foreground-subtle">
-          Project membership (for guests)
-        </h2>
-        <select
-          value={selectedProjectId}
-          onChange={(e) => setSelectedProjectId(e.target.value)}
-          className="mb-3 w-full rounded-md border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-accent"
-        >
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-
-        <div className="flex flex-col gap-1">
-          {currentMembers.map((member) => {
-            const profile = profileById.get(member.user_id);
-            return (
-              <div key={member.user_id} className="flex items-center justify-between text-sm">
-                <span>{profile?.full_name || profile?.email || member.user_id}</span>
-                <button
-                  onClick={() =>
-                    run(() => removeProjectMember(selectedProjectId, member.user_id))
-                  }
-                  className="text-xs text-foreground-subtle hover:text-danger"
-                >
-                  Remove
-                </button>
-              </div>
-            );
-          })}
-          {currentMembers.length === 0 && (
-            <p className="text-xs text-foreground-subtle">No members added.</p>
-          )}
-        </div>
-
-        {memberOptions.length > 0 && (
-          <div className="mt-3 flex gap-2 border-t border-border pt-3">
-            <select
-              value={memberPick}
-              onChange={(e) => setMemberPick(e.target.value)}
-              className="h-8 flex-1 rounded-md border border-border bg-surface px-2 text-sm outline-none focus:border-accent"
-            >
-              <option value="">Add a person...</option>
-              {memberOptions.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.full_name || p.email}
-                </option>
-              ))}
-            </select>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                if (!memberPick) return;
-                run(() => addProjectMember(selectedProjectId, memberPick));
-                setMemberPick("");
-              }}
-            >
-              Add
-            </Button>
-          </div>
-        )}
       </Card>
 
       <Card>
