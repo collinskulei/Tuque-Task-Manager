@@ -22,6 +22,9 @@
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
+
+  --dot-color: rgba(0, 0, 0, 0.07);
+  --dot-size: 22px;
 }
 
 @theme inline {
@@ -70,6 +73,8 @@
 
     --success: #3ecf94;
     --success-muted: #123626;
+
+    --dot-color: rgba(255, 255, 255, 0.09);
   }
 }
 
@@ -78,7 +83,9 @@
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
+  background-image: radial-gradient(var(--dot-color) 1px, transparent 1px);
+  background-size: var(--dot-size) var(--dot-size);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
