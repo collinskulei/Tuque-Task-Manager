@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { StatusSelect } from "@/components/tasks/status-select";
 import { TagPicker } from "@/components/tasks/tag-picker";
 import { useServerAction } from "@/lib/use-server-action";
+import { fireConfetti } from "@/lib/confetti";
 import { formatFileSize } from "@/lib/utils";
 
 export function TaskDetail({
@@ -81,6 +82,7 @@ export function TaskDetail({
   }
 
   function handleStatusChange(status: TaskStatus) {
+    if (status === "done") fireConfetti();
     run(() => updateTaskStatus(task.id, projectId, status));
   }
 
@@ -244,7 +246,7 @@ export function TaskDetail({
                       }
                       className="w-full rounded-md border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-accent disabled:opacity-60"
                     >
-                      <option value="">—</option>
+                      <option value="">None</option>
                       {(field.options ?? []).map((opt) => (
                         <option key={opt} value={opt}>
                           {opt}
@@ -334,7 +336,12 @@ export function TaskDetail({
                 <StatusSelect
                   value={sub.status}
                   onChange={
-                    readOnly ? () => {} : (status) => run(() => updateTaskStatus(sub.id, projectId, status))
+                    readOnly
+                      ? () => {}
+                      : (status) => {
+                          if (status === "done") fireConfetti();
+                          run(() => updateTaskStatus(sub.id, projectId, status));
+                        }
                   }
                 />
                 <span className="flex-1 truncate text-sm">{sub.title}</span>
@@ -405,15 +412,16 @@ export function TaskDetail({
         </section>
 
         {!readOnly && (
-          <section className="mb-6">
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">
-                Time logged
-              </h3>
+          <details className="mb-6" open={task.timeEntries.length > 0}>
+            <summary className="flex cursor-pointer select-none items-center justify-between text-xs font-medium uppercase tracking-wide text-foreground-subtle hover:text-foreground">
+              <span>Log time (optional)</span>
               {totalHours > 0 && (
-                <span className="text-xs text-foreground-subtle">{totalHours}h total</span>
+                <span className="normal-case text-foreground-subtle">{totalHours}h total</span>
               )}
-            </div>
+            </summary>
+            <p className="mb-3 mt-2 text-xs normal-case leading-relaxed text-foreground-muted">
+              This helps you know how much time was used in the task to manage your efficiency.
+            </p>
             <div className="flex flex-col gap-1">
               {task.timeEntries.map((entry) => {
                 const author = profileById.get(entry.user_id);
@@ -421,7 +429,7 @@ export function TaskDetail({
                   <div key={entry.id} className="flex items-center gap-2 text-sm">
                     <span className="shrink-0 font-medium">{entry.hours}h</span>
                     <span className="flex-1 truncate text-foreground-muted">
-                      {entry.note || "—"}
+                      {entry.note || "No note"}
                     </span>
                     <span className="shrink-0 text-xs text-foreground-subtle">
                       {author?.full_name || author?.email}
@@ -459,7 +467,7 @@ export function TaskDetail({
                 Log
               </Button>
             </div>
-          </section>
+          </details>
         )}
 
         <section className="mb-6">

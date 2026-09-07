@@ -71,7 +71,7 @@ export function TourOverlay() {
   const { active, stepIndex, steps, rect, locating, next, prev, stop } = useTour();
 
   // This component only ever renders content once `active` is true, which only
-  // happens in response to a user click — so we're always fully client-side by
+  // happens in response to a user click, so we're always fully client-side by
   // then and can read `window` directly during render with no hydration risk.
   if (!active) return null;
   const step = steps[stepIndex];

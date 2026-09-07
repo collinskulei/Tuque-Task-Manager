@@ -6,6 +6,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { TagChip } from "@/components/tasks/tag-picker";
 import { useServerAction } from "@/lib/use-server-action";
 import { cn, formatDate } from "@/lib/utils";
+import { fireConfetti } from "@/lib/confetti";
 import { StatusSelect } from "@/components/tasks/status-select";
 
 export function TaskList({
@@ -26,6 +27,7 @@ export function TaskList({
   const tagById = new Map((tags ?? []).map((t) => [t.id, t]));
 
   function handleStatusChange(taskId: string, projectId: string, status: TaskStatus) {
+    if (status === "done") fireConfetti();
     run(() => updateTaskStatus(taskId, projectId, status));
   }
 

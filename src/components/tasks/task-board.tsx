@@ -7,6 +7,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { useServerAction } from "@/lib/use-server-action";
 import { cn, formatDate } from "@/lib/utils";
+import { fireConfetti } from "@/lib/confetti";
 
 export function TaskBoard({
   tasks,
@@ -23,8 +24,9 @@ export function TaskBoard({
   const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
   const profileById = new Map(profiles.map((p) => [p.id, p]));
 
-  function handleDrop(taskId: string, projectId: string, status: TaskStatus) {
+  function handleDrop(taskId: string, projectId: string, status: TaskStatus, x?: number, y?: number) {
     setDragOverColumn(null);
+    if (status === "done") fireConfetti(x, y);
     run(() => updateTaskStatus(taskId, projectId, status));
   }
 
@@ -52,7 +54,7 @@ export function TaskBoard({
                     const { taskId, projectId } = JSON.parse(
                       e.dataTransfer.getData("text/plain")
                     );
-                    handleDrop(taskId, projectId, column.value);
+                    handleDrop(taskId, projectId, column.value, e.clientX, e.clientY);
                   }
             }
             className={cn(

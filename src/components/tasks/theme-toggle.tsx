@@ -13,8 +13,8 @@ export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme | null>(null);
 
   useEffect(() => {
-    // One-time sync from localStorage/matchMedia (client-only APIs) on mount —
-    // must run after hydration, since the server can't know the stored preference.
+    // One-time sync from localStorage/matchMedia (client-only APIs) on mount.
+    // Must run after hydration, since the server can't know the stored preference.
     const stored = localStorage.getItem("theme");
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(stored === "light" || stored === "dark" ? stored : getSystemTheme());

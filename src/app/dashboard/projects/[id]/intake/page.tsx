@@ -34,7 +34,7 @@ export default async function IntakePage(props: PageProps<"/dashboard/projects/[
 
       {submitted && (
         <p className="mb-4 rounded-md bg-accent-muted px-3 py-2 text-sm text-accent">
-          Submitted — your task was added to the project.
+          Submitted. Your task was added to the project.
         </p>
       )}
 
@@ -89,7 +89,7 @@ export default async function IntakePage(props: PageProps<"/dashboard/projects/[
                 name={`field_${field.id}`}
                 className="w-full rounded-md border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-accent"
               >
-                <option value="">—</option>
+                <option value="">None</option>
                 {(field.options ?? []).map((opt) => (
                   <option key={opt} value={opt}>
                     {opt}

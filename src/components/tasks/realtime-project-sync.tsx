@@ -16,7 +16,7 @@ export function RealtimeProjectSync({ projectId }: { projectId: string }) {
     let cancelled = false;
 
     // RLS on `tasks`/`comments` is scoped `to authenticated`. Realtime evaluates
-    // that using the client's synced auth token, not just the anon apikey — if we
+    // that using the client's synced auth token, not just the anon apikey. If we
     // subscribe before the session is loaded, events get silently filtered out.
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (cancelled) return;

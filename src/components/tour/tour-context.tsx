@@ -31,7 +31,7 @@ function buildSteps({ firstProjectId, isAdmin, isGuest }: TourOptions): TourStep
   const steps: TourStep[] = [
     {
       id: "welcome",
-      title: "Welcome to Tuque Task Manager 👋",
+      title: "Welcome to Tuque Task Manager",
       body: "Let's walk through everything the app can do, step by step. Use Next / Back anytime, or Skip to leave whenever you like.",
     },
     {
@@ -39,7 +39,7 @@ function buildSteps({ firstProjectId, isAdmin, isGuest }: TourOptions): TourStep
       route: "/dashboard",
       target: "my-tasks-link",
       title: "My Tasks",
-      body: "Every task assigned to you, across every project, lives here — the first place to check each morning.",
+      body: "Every task assigned to you, across every project, lives here. It's the first place to check each morning.",
     },
     {
       id: "inbox",
@@ -73,7 +73,7 @@ function buildSteps({ firstProjectId, isAdmin, isGuest }: TourOptions): TourStep
       route: "/dashboard",
       target: "new-project-btn",
       title: "Start a new project",
-      body: "Click here anytime to spin up a new project — just give it a name and press Enter.",
+      body: "Click here anytime to spin up a new project, just give it a name and press Enter.",
     }
   );
 
@@ -85,7 +85,7 @@ function buildSteps({ firstProjectId, isAdmin, isGuest }: TourOptions): TourStep
         route: projectRoute,
         target: "view-switcher",
         title: "Five ways to see your work",
-        body: "Switch between List, Board (kanban), Calendar, Timeline, and Reports — same tasks, different lens on them.",
+        body: "Switch between List, Board (kanban), Calendar, Timeline, and Reports: same tasks, different lens on them.",
       },
       {
         id: "add-task",
@@ -99,14 +99,14 @@ function buildSteps({ firstProjectId, isAdmin, isGuest }: TourOptions): TourStep
         route: projectRoute,
         target: "task-row",
         title: "Click any task to open it",
-        body: "Inside, you can add subtasks, comments, file attachments, tags, custom fields, dependencies, and log time — all in one place.",
+        body: "Inside, you can add subtasks, comments, file attachments, tags, custom fields, dependencies, and log time, all in one place.",
       },
       {
         id: "project-tools",
         route: projectRoute,
         target: "fields-btn",
         title: "Customize how you track work",
-        body: '"Fields" adds custom columns like Priority or Budget. "Rules" automates busywork — e.g. "when status changes to Done, notify the assignee." "Form" gives you a shareable intake form that creates tasks automatically.',
+        body: '"Fields" adds custom columns like Priority or Budget. "Rules" automates busywork, for example "when status changes to Done, notify the assignee." "Form" gives you a shareable intake form that creates tasks automatically.',
       }
     );
   }
@@ -134,12 +134,12 @@ function buildSteps({ firstProjectId, isAdmin, isGuest }: TourOptions): TourStep
       id: "theme",
       route: "/dashboard",
       target: "theme-toggle",
-      title: "Light or dark — your call",
+      title: "Light or dark, your call",
       body: "Click here to switch themes. It remembers your choice next time you visit.",
     },
     {
       id: "done",
-      title: "You're ready 🎉",
+      title: "You're ready",
       body: 'That\'s the full tour. Click "Guide me" in the sidebar any time you want to see it again.',
     }
   );
@@ -220,7 +220,7 @@ export function TourProvider({
     if (!step) return;
 
     const runId = ++runIdRef.current;
-    // Kicking off a fresh imperative DOM-locate process for the new step —
+    // Kicking off a fresh imperative DOM-locate process for the new step,
     // not deriving state from props, so this can't move out of the effect.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setRect(null);
@@ -251,7 +251,7 @@ export function TourProvider({
         return;
       }
       if (Date.now() - startedAt > LOCATE_TIMEOUT_MS) {
-        // Target never appeared (e.g. no tasks yet) — skip forward gracefully.
+        // Target never appeared (e.g. no tasks yet), so skip forward gracefully.
         setLocating(false);
         setStepIndex((i) => (i < steps.length - 1 ? i + 1 : i));
         return;

@@ -9,7 +9,7 @@
   --foreground-muted: #6b6b6b;
   --foreground-subtle: #9a9a9a;
 
-  /* Navy from Tuque Consulting — primary interactive accent */
+  /* Navy from Tuque Consulting: primary interactive accent */
   --accent: #1b3d73;
   --accent-foreground: #ffffff;
   --accent-muted: #eaeff8;
@@ -20,11 +20,11 @@
   --success: #1a9e6b;
   --success-muted: #e8f7f0;
 
-  /* Orange from ilkerin Consulting — used sparingly (badges, highlights) */
+  /* Orange from ilkerin Consulting: used sparingly (badges, highlights) */
   --brand-orange: #e2622c;
   --brand-orange-muted: #fceee6;
 
-  /* Maroon from Tuque Consulting — reserved for rare brand accents */
+  /* Maroon from Tuque Consulting: reserved for rare brand accents */
   --brand-maroon: #7a1f2b;
 
   --radius-sm: 6px;
@@ -132,4 +132,17 @@ body {
   background-size: var(--dot-size) var(--dot-size);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+@keyframes confetti-burst {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%)
+      translate(var(--confetti-dx), calc(var(--confetti-dy) + 220px))
+      rotate(var(--confetti-rot));
+    opacity: 0;
+  }
 }
