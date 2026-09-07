@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# generated codebase map report
+.codemap/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
