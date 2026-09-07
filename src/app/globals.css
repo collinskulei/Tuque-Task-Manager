@@ -9,15 +9,23 @@
   --foreground-muted: #6b6b6b;
   --foreground-subtle: #9a9a9a;
 
-  --accent: #3462ff;
+  /* Navy from Tuque Consulting — primary interactive accent */
+  --accent: #1b3d73;
   --accent-foreground: #ffffff;
-  --accent-muted: #eef2ff;
+  --accent-muted: #eaeff8;
 
   --danger: #d64545;
   --danger-muted: #fbeaea;
 
   --success: #1a9e6b;
   --success-muted: #e8f7f0;
+
+  /* Orange from ilkerin Consulting — used sparingly (badges, highlights) */
+  --brand-orange: #e2622c;
+  --brand-orange-muted: #fceee6;
+
+  /* Maroon from Tuque Consulting — reserved for rare brand accents */
+  --brand-maroon: #7a1f2b;
 
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -46,6 +54,10 @@
   --color-success: var(--success);
   --color-success-muted: var(--success-muted);
 
+  --color-brand-orange: var(--brand-orange);
+  --color-brand-orange-muted: var(--brand-orange-muted);
+  --color-brand-maroon: var(--brand-maroon);
+
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
@@ -54,8 +66,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Dark palette applies when the system prefers dark AND the user hasn't
+   explicitly chosen light, OR when the user has explicitly chosen dark. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --background: #0a0a0a;
     --surface: #131313;
     --surface-muted: #1a1a1a;
@@ -64,7 +78,7 @@
     --foreground-muted: #a0a0a0;
     --foreground-subtle: #6e6e6e;
 
-    --accent: #5b7fff;
+    --accent: #7098d9;
     --accent-foreground: #0a0a0a;
     --accent-muted: #16203f;
 
@@ -74,8 +88,38 @@
     --success: #3ecf94;
     --success-muted: #123626;
 
+    --brand-orange: #f0895a;
+    --brand-orange-muted: #3a2417;
+    --brand-maroon: #c0525f;
+
     --dot-color: rgba(255, 255, 255, 0.09);
   }
+}
+
+:root[data-theme="dark"] {
+  --background: #0a0a0a;
+  --surface: #131313;
+  --surface-muted: #1a1a1a;
+  --border: #262626;
+  --foreground: #ededed;
+  --foreground-muted: #a0a0a0;
+  --foreground-subtle: #6e6e6e;
+
+  --accent: #7098d9;
+  --accent-foreground: #0a0a0a;
+  --accent-muted: #16203f;
+
+  --danger: #e5766f;
+  --danger-muted: #3a1f1f;
+
+  --success: #3ecf94;
+  --success-muted: #123626;
+
+  --brand-orange: #f0895a;
+  --brand-orange-muted: #3a2417;
+  --brand-maroon: #c0525f;
+
+  --dot-color: rgba(255, 255, 255, 0.09);
 }
 
 * {

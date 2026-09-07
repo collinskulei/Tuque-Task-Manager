@@ -8,7 +8,7 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
     >
       Inbox
       {unreadCount > 0 && (
-        <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-medium text-accent-foreground">
+        <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-orange px-1 text-[10px] font-medium text-white">
           {unreadCount > 9 ? "9+" : unreadCount}
         </span>
       )}

@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { JointLogo } from "@/components/tasks/brand-logos";
 import { signIn, signUp } from "./actions";
 
 export default async function LoginPage(props: PageProps<"/login">) {
@@ -10,8 +11,9 @@ export default async function LoginPage(props: PageProps<"/login">) {
   return (
     <div className="flex flex-1 items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <h1 className="text-xl font-semibold tracking-tight">Tuque Task Manager</h1>
+        <div className="mb-8 flex flex-col items-center text-center">
+          <JointLogo size="lg" />
+          <h1 className="mt-4 text-xl font-semibold tracking-tight">Task Manager</h1>
           <p className="mt-1 text-sm text-foreground-muted">Sign in to your workspace</p>
         </div>
 

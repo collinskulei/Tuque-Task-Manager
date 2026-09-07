@@ -7,6 +7,8 @@ import { NewProjectForm } from "@/components/tasks/new-project-form";
 import { NewPortfolioForm } from "@/components/tasks/new-portfolio-form";
 import { NotificationBell } from "@/components/tasks/notification-bell";
 import { RealtimeNotifications } from "@/components/tasks/realtime-notifications";
+import { JointLogo } from "@/components/tasks/brand-logos";
+import { ThemeToggle } from "@/components/tasks/theme-toggle";
 
 export default async function DashboardLayout({
   children,
@@ -32,8 +34,8 @@ export default async function DashboardLayout({
   return (
     <div className="flex flex-1">
       <aside className="flex w-56 shrink-0 flex-col border-r border-border px-3 py-4">
-        <div className="px-2 pb-6 text-sm font-semibold tracking-tight">
-          Tuque
+        <div className="px-2 pb-6">
+          <JointLogo />
         </div>
 
         <nav className="flex flex-1 flex-col gap-4 overflow-y-auto">
@@ -111,6 +113,7 @@ export default async function DashboardLayout({
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs text-foreground-muted">{email}</p>
           </div>
+          <ThemeToggle />
           <form action={signOut}>
             <button
               type="submit"
