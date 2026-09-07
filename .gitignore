@@ -37,8 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
-# generated codebase map report
-.codemap/
+# codebase map: keep the prompt tracked, ignore the generated report
+.codemap/*
+!.codemap/PROMPT.md
 
 # typescript
 *.tsbuildinfo
