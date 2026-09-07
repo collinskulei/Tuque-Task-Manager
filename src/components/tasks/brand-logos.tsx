@@ -16,6 +16,7 @@ export function JointLogo({ size = "sm" }: { size?: "sm" | "lg" }) {
         alt="Tuque Consulting"
         width={814}
         height={244}
+        sizes="100px"
         style={{ height: heights.tuque, width: "auto" }}
         priority={size === "lg"}
       />
@@ -25,6 +26,7 @@ export function JointLogo({ size = "sm" }: { size?: "sm" | "lg" }) {
         alt="ilkerin Consulting"
         width={930}
         height={503}
+        sizes="80px"
         style={{ height: heights.ilkerin, width: "auto" }}
         priority={size === "lg"}
       />
