@@ -90,6 +90,7 @@ function TaskRow({
   return (
     <button
       onClick={() => onSelect(task.id)}
+      data-tour="task-row"
       className={cn(
         "flex w-full items-center gap-3 border-b border-border py-2.5 text-left transition-colors hover:bg-surface-muted",
         indent && "pl-8"

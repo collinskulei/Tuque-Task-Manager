@@ -9,6 +9,9 @@ import { NotificationBell } from "@/components/tasks/notification-bell";
 import { RealtimeNotifications } from "@/components/tasks/realtime-notifications";
 import { JointLogo } from "@/components/tasks/brand-logos";
 import { ThemeToggle } from "@/components/tasks/theme-toggle";
+import { TourProvider } from "@/components/tour/tour-context";
+import { TourOverlay } from "@/components/tour/tour-overlay";
+import { GuideMeButton } from "@/components/tour/guide-me-button";
 
 export default async function DashboardLayout({
   children,
@@ -32,101 +35,111 @@ export default async function DashboardLayout({
   const isAdmin = me?.role === "admin";
 
   return (
-    <div className="flex flex-1">
-      <aside className="flex w-56 shrink-0 flex-col border-r border-border px-3 py-4">
-        <div className="px-2 pb-6">
-          <JointLogo />
-        </div>
-
-        <nav className="flex flex-1 flex-col gap-4 overflow-y-auto">
-          <div className="flex flex-col gap-0.5">
-            <Link
-              href="/dashboard"
-              className="rounded-md px-2 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
-            >
-              My Tasks
-            </Link>
-            <NotificationBell unreadCount={unreadCount} />
-            {!isGuest && (
-              <Link
-                href="/dashboard/workload"
-                className="rounded-md px-2 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
-              >
-                Workload
-              </Link>
-            )}
-            {isAdmin && (
-              <Link
-                href="/dashboard/admin"
-                className="rounded-md px-2 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
-              >
-                Admin
-              </Link>
-            )}
+    <TourProvider firstProjectId={projects[0]?.id ?? null} isAdmin={isAdmin} isGuest={isGuest}>
+      <div className="flex flex-1">
+        <aside className="flex w-56 shrink-0 flex-col border-r border-border px-3 py-4">
+          <div className="px-2 pb-4">
+            <JointLogo />
           </div>
 
-          <div>
-            <div className="flex items-center justify-between px-2 pb-1">
-              <span className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">
-                Projects
-              </span>
-            </div>
+          <div className="px-2 pb-4">
+            <GuideMeButton />
+          </div>
+
+          <nav className="flex flex-1 flex-col gap-4 overflow-y-auto">
             <div className="flex flex-col gap-0.5">
-              {projects.map((project) => (
+              <Link
+                href="/dashboard"
+                data-tour="my-tasks-link"
+                className="rounded-md px-2 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+              >
+                My Tasks
+              </Link>
+              <NotificationBell unreadCount={unreadCount} />
+              {!isGuest && (
                 <Link
-                  key={project.id}
-                  href={`/dashboard/projects/${project.id}`}
-                  className="truncate rounded-md px-2 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+                  href="/dashboard/workload"
+                  data-tour="workload-link"
+                  className="rounded-md px-2 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
                 >
-                  {project.name}
+                  Workload
                 </Link>
-              ))}
+              )}
+              {isAdmin && (
+                <Link
+                  href="/dashboard/admin"
+                  data-tour="admin-link"
+                  className="rounded-md px-2 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+                >
+                  Admin
+                </Link>
+              )}
             </div>
-            {!isGuest && <NewProjectForm />}
-          </div>
 
-          {!isGuest && (
-            <div>
+            <div data-tour="projects-section">
               <div className="flex items-center justify-between px-2 pb-1">
                 <span className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">
-                  Portfolios
+                  Projects
                 </span>
               </div>
               <div className="flex flex-col gap-0.5">
-                {portfolios.map((portfolio) => (
+                {projects.map((project) => (
                   <Link
-                    key={portfolio.id}
-                    href={`/dashboard/portfolios/${portfolio.id}`}
+                    key={project.id}
+                    href={`/dashboard/projects/${project.id}`}
                     className="truncate rounded-md px-2 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
                   >
-                    {portfolio.name}
+                    {project.name}
                   </Link>
                 ))}
               </div>
-              <NewPortfolioForm />
+              {!isGuest && <NewProjectForm />}
             </div>
-          )}
-        </nav>
 
-        <div className="flex items-center gap-2 border-t border-border pt-3">
-          <Avatar name={email} />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs text-foreground-muted">{email}</p>
+            {!isGuest && (
+              <div data-tour="portfolios-section">
+                <div className="flex items-center justify-between px-2 pb-1">
+                  <span className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">
+                    Portfolios
+                  </span>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  {portfolios.map((portfolio) => (
+                    <Link
+                      key={portfolio.id}
+                      href={`/dashboard/portfolios/${portfolio.id}`}
+                      className="truncate rounded-md px-2 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+                    >
+                      {portfolio.name}
+                    </Link>
+                  ))}
+                </div>
+                <NewPortfolioForm />
+              </div>
+            )}
+          </nav>
+
+          <div className="flex items-center gap-2 border-t border-border pt-3">
+            <Avatar name={email} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs text-foreground-muted">{email}</p>
+            </div>
+            <ThemeToggle />
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="text-xs text-foreground-subtle hover:text-foreground"
+              >
+                Sign out
+              </button>
+            </form>
           </div>
-          <ThemeToggle />
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="text-xs text-foreground-subtle hover:text-foreground"
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
-        <RealtimeNotifications userId={user!.id} />
-      </aside>
+          <RealtimeNotifications userId={user!.id} />
+        </aside>
 
-      <main className="flex-1 overflow-y-auto px-8 py-6">{children}</main>
-    </div>
+        <main className="flex-1 overflow-y-auto px-8 py-6">{children}</main>
+      </div>
+      <TourOverlay />
+    </TourProvider>
   );
 }

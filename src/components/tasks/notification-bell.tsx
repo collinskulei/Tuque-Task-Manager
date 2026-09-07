@@ -4,6 +4,7 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
   return (
     <Link
       href="/dashboard/inbox"
+      data-tour="inbox-link"
       className="relative flex items-center rounded-md px-2 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
     >
       Inbox

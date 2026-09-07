@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { JointLogo } from "@/components/tasks/brand-logos";
 import { signIn, signUp } from "./actions";
 
@@ -19,7 +20,7 @@ export default async function LoginPage(props: PageProps<"/login">) {
 
         <form className="flex flex-col gap-3" action={signIn}>
           <Input type="email" name="email" placeholder="Email" required autoFocus />
-          <Input type="password" name="password" placeholder="Password" required minLength={6} />
+          <PasswordInput name="password" placeholder="Password" required minLength={6} />
 
           {error && <p className="text-sm text-danger">{error}</p>}
           {notice && <p className="text-sm text-foreground-muted">{notice}</p>}

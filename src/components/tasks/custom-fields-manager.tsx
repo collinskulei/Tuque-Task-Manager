@@ -48,6 +48,7 @@ export function CustomFieldsManager({
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
+        data-tour="fields-btn"
         className="text-xs text-foreground-subtle hover:text-foreground"
       >
         Fields

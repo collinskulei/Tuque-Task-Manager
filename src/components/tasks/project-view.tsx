@@ -68,7 +68,7 @@ export function ProjectView({
   return (
     <div className="flex h-full flex-col">
       <div className="mb-4 flex items-center gap-3">
-        <div className="flex rounded-md border border-border p-0.5">
+        <div className="flex rounded-md border border-border p-0.5" data-tour="view-switcher">
           {VIEWS.map((v) => (
             <button
               key={v}
@@ -124,6 +124,7 @@ export function ProjectView({
             onChange={(e) => setNewTaskTitle(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
             placeholder="+ Add task"
+            data-tour="add-task-input"
           />
           <Button onClick={handleAddTask}>Add</Button>
         </div>

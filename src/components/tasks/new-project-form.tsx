@@ -11,6 +11,7 @@ export function NewProjectForm() {
     return (
       <button
         onClick={() => setOpen(true)}
+        data-tour="new-project-btn"
         className="mt-1 w-full rounded-md px-2 py-1.5 text-left text-sm text-foreground-subtle transition-colors hover:bg-surface-muted hover:text-foreground"
       >
         + New project
