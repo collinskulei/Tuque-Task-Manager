@@ -79,7 +79,7 @@ export function TimelineView({
                 className="shrink-0 border-b border-l border-border py-1 text-center text-[10px] text-foreground-subtle"
               >
                 {day.getDate() === 1 || day.getDay() === 1
-                  ? day.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+                  ? day.toLocaleDateString("en-US", { month: "short", day: "numeric" })
                   : day.getDate()}
               </div>
             ))}

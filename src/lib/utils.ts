@@ -6,7 +6,7 @@ export function cn(...values: ClassValue[]): string {
 
 export function formatDate(value: string | null): string | null {
   if (!value) return null;
-  return new Date(value + "T00:00:00").toLocaleDateString(undefined, {
+  return new Date(value + "T00:00:00").toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
   });

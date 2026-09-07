@@ -43,7 +43,7 @@ export function CalendarView({
   }, [allTasks]);
 
   const days = buildMonthGrid(cursor.getFullYear(), cursor.getMonth());
-  const monthLabel = cursor.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const monthLabel = cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
   return (
     <div className="flex h-full flex-col">
